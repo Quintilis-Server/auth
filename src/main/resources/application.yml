@@ -1,0 +1,51 @@
+server:
+    port: 8080
+spring:
+    application:
+        name: auth
+    datasource:
+        driver-class-name: org.postgresql.Driver
+        url: "jdbc:postgresql://${DB_HOST}:5432/minecraft"
+        username: "${DB_USERNAME}"
+        password: "${DB_PASSWORD}"
+        hikari:
+            max-lifetime: 540000
+    jpa:
+        database-platform: org.hibernate.dialect.PostgreSQLDialect
+    cache:
+        type: redis
+    data:
+        redis:
+            host: "${CACHE_HOST}"
+            port: "${CACHE_PORT}"
+            password: "${CACHE_PASSWORD}"
+    security:
+        oauth2:
+            client:
+                registration:
+                    google:
+                        client-id: "google-client-id-temporario"
+                        client-secret: "google-secret-temporario"
+                        # O Google é nativo do Spring, ele já sabe o grant-type e redirect-uri por padrão
+                        scope:
+                            - openid
+                            - profile
+                            - email
+                    
+                    microsoft:
+                        client-id: "microsoft-client-id-temporario"
+                        client-secret: "microsoft-secret-temporario"
+                        provider: microsoft
+                        authorization-grant-type: authorization_code
+                        redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+                        scope:
+                            - openid
+                            - profile
+                            - email
+                
+                provider:
+                    microsoft:
+                        authorization-uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+                        token-uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
+                        jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+                        user-name-attribute: name
