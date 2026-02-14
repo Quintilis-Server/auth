@@ -1,6 +1,7 @@
 package org.quintilis.auth.config
 
 import org.quintilis.auth.service.CustomOAuth2Service
+import org.quintilis.auth.service.CustomOidcUserService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -15,7 +16,8 @@ import org.springframework.security.web.SecurityFilterChain
 @Configuration
 @EnableWebSecurity
 class SecurityConfig(
-    private val customOAuth2Service: CustomOAuth2Service
+    private val customOAuth2Service: CustomOAuth2Service,
+    private val customOidcUserService: CustomOidcUserService // Injetando o novo serviço
 ) {
 
     @Bean
@@ -23,15 +25,18 @@ class SecurityConfig(
     fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .authorizeHttpRequests { auth ->
-                auth.requestMatchers("/auth/register", "/error", "/login", "/css/**", "/js/**").permitAll()
+                auth.requestMatchers("/auth/register", "/error", "/login", "/register", "/css/**", "/js/**").permitAll()
                 auth.anyRequest().authenticated()
             }
             .formLogin { form ->
-                form.loginPage("/login").permitAll() // Usa nossa página customizada
+                form.loginPage("/login").permitAll()
             }
             .oauth2Login { oauth ->
-                oauth.loginPage("/login") // Também usa nossa página para login social
-                oauth.userInfoEndpoint { it.userService(customOAuth2Service) }
+                oauth.loginPage("/login")
+                oauth.userInfoEndpoint { userInfo -> 
+                    userInfo.userService(customOAuth2Service) // Para OAuth2 puro (Github, etc)
+                    userInfo.oidcUserService(customOidcUserService) // Para OIDC (Google, Microsoft)
+                }
             }
             .oauth2ResourceServer { oauth2 ->
                 oauth2.jwt { }

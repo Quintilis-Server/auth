@@ -24,16 +24,16 @@ spring:
             client:
                 registration:
                     google:
-                        client-id: "google-client-id-temporario"
-                        client-secret: "google-secret-temporario"
+                        client-id: "${GOOGLE_CLIENT_ID}"
+                        client-secret: "${GOOGLE_CLIENT_SECRET}"
                         scope:
                             - openid
                             - profile
                             - email
                     
                     microsoft:
-                        client-id: "microsoft-client-id-temporario"
-                        client-secret: "microsoft-secret-temporario"
+                        client-id: "${MICROSOFT_CLIENT_ID}"
+                        client-secret: "${MICROSOFT_CLIENT_SECRET}"
                         provider: microsoft
                         authorization-grant-type: authorization_code
                         redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"

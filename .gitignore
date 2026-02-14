@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### React Frontend ###
+node_modules/
+**/node_modules/
+src/main/frontend/build/
+src/main/frontend/.env.local
+npm-debug.log
+yarn-debug.log
