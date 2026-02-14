@@ -1,0 +1,114 @@
+package org.quintilis.auth.config
+
+import com.nimbusds.jose.jwk.JWKSet
+import com.nimbusds.jose.jwk.RSAKey
+import com.nimbusds.jose.jwk.source.ImmutableJWKSet
+import com.nimbusds.jose.jwk.source.JWKSource
+import com.nimbusds.jose.proc.SecurityContext
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.core.annotation.Order
+import org.springframework.http.MediaType
+import org.springframework.security.config.Customizer
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer
+import org.springframework.security.oauth2.core.AuthorizationGrantType
+import org.springframework.security.oauth2.core.ClientAuthenticationMethod
+import org.springframework.security.oauth2.core.oidc.OidcScopes
+import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClient
+import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
+import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings
+import org.springframework.security.oauth2.server.authorization.settings.ClientSettings
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
+import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
+import java.security.KeyPair
+import java.security.KeyPairGenerator
+import java.security.interfaces.RSAPrivateKey
+import java.security.interfaces.RSAPublicKey
+import java.util.UUID
+
+@Configuration
+@EnableWebSecurity
+class AuthorizationServerConfig {
+
+    @Bean
+    @Order(1)
+    fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+        val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
+        val endpointsMatcher = authorizationServerConfigurer.endpointsMatcher
+
+        http
+            .securityMatcher(endpointsMatcher)
+            .authorizeHttpRequests { authorize ->
+                authorize.anyRequest().authenticated()
+            }
+            .csrf { csrf ->
+                csrf.ignoringRequestMatchers(endpointsMatcher)
+            }
+            .with(authorizationServerConfigurer, Customizer.withDefaults())
+
+        authorizationServerConfigurer.oidc(Customizer.withDefaults())
+
+        http
+            .exceptionHandling { exceptions ->
+                exceptions.defaultAuthenticationEntryPointFor(
+                    LoginUrlAuthenticationEntryPoint("/login"),
+                    MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                )
+            }
+            .oauth2ResourceServer { resourceServer ->
+                resourceServer.jwt(Customizer.withDefaults())
+            }
+
+        return http.build()
+    }
+
+    @Bean
+    fun registeredClientRepository(): RegisteredClientRepository {
+        val frontendClient = RegisteredClient.withId(UUID.randomUUID().toString())
+            .clientId("quintilis-frontend")
+            .clientSecret("{noop}secret-frontend")
+            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+            .redirectUri("http://localhost:3000/authorized")
+            .redirectUri("https://oauth.pstmn.io/v1/callback")
+            .redirectUri("https://oidcdebugger.com/debug")
+            .scope(OidcScopes.OPENID)
+            .scope(OidcScopes.PROFILE)
+            .clientSettings(ClientSettings.builder()
+                .requireAuthorizationConsent(false) // <--- Alterado para false (sem tela de consentimento)
+                .requireProofKey(false)
+                .build())
+            .build()
+
+        return InMemoryRegisteredClientRepository(frontendClient)
+    }
+
+    @Bean
+    fun jwkSource(): JWKSource<SecurityContext> {
+        val keyPair = generateRsaKey()
+        val publicKey = keyPair.public as RSAPublicKey
+        val privateKey = keyPair.private as RSAPrivateKey
+        val rsaKey = RSAKey.Builder(publicKey)
+            .privateKey(privateKey)
+            .keyID(UUID.randomUUID().toString())
+            .build()
+        val jwkSet = JWKSet(rsaKey)
+        return ImmutableJWKSet(jwkSet)
+    }
+
+    private fun generateRsaKey(): KeyPair {
+        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
+        keyPairGenerator.initialize(2048)
+        return keyPairGenerator.generateKeyPair()
+    }
+
+    @Bean
+    fun authorizationServerSettings(): AuthorizationServerSettings {
+        return AuthorizationServerSettings.builder().build()
+    }
+}

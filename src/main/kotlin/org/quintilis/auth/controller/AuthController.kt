@@ -1,56 +1,65 @@
 package org.quintilis.auth.controller
 
-import org.quintilis.auth.service.JWTService
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
+import org.quintilis.auth.dto.LoginRequest
+import org.quintilis.auth.dto.RegisterRequest
 import org.quintilis.common.entities.auth.User
 import org.quintilis.common.repositories.UserRepository
-import org.quintilis.common.response.ApiResponse
+import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
+import org.springframework.security.core.context.SecurityContextHolder
+import org.springframework.security.core.context.SecurityContextHolderStrategy
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository
+import org.springframework.security.web.context.SecurityContextRepository
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/auth")
 class AuthController(
     private val authenticationManager: AuthenticationManager,
-    private val jwtService: JWTService,
     private val userRepository: UserRepository,
     private val passwordEncoder: PasswordEncoder
 ) {
-    data class LoginRequest(val login: String, val password: String)
-    data class LoginResponse(val token: String)
-
-    data class RegisterRequest(val username: String, val email: String, val password: String)
-
-    @PostMapping("/register")
-    fun register(@RequestBody request: RegisterRequest): ApiResponse<String> {
-        // 1. Cria o usuário vazando a senha no BCrypt
-        val newUser = User().apply {
-            this.username = request.username
-            this.email = request.email
-            this.passwordHash = passwordEncoder.encode(request.password) // A MÁGICA AQUI
-            this.role = "USER"
-        }
-
-        // 2. Salva no banco de dados
-        userRepository.save(newUser)
-
-        return ApiResponse.success("Usuário registrado com sucesso!")
-    }
+    private val securityContextHolderStrategy: SecurityContextHolderStrategy = SecurityContextHolder.getContextHolderStrategy()
+    private val securityContextRepository: SecurityContextRepository = HttpSessionSecurityContextRepository()
 
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequest): ApiResponse<LoginResponse>{
-        val authentication = authenticationManager.authenticate(
-            UsernamePasswordAuthenticationToken(request.login, request.password)
-        )
+    fun login(@RequestBody loginRequest: LoginRequest, request: HttpServletRequest, response: HttpServletResponse) {
+        // 1. Cria o token não autenticado com os dados recebidos
+        val token = UsernamePasswordAuthenticationToken.unauthenticated(loginRequest.username, loginRequest.password)
+        
+        // 2. Autentica usando o seu CustomUserDetailsService (já configurado no Spring)
+        val authentication = authenticationManager.authenticate(token)
 
-        val userId = authentication.name;
+        // 3. Salva a autenticação na Sessão (Cria o JSESSIONID)
+        val context = securityContextHolderStrategy.createEmptyContext()
+        context.authentication = authentication
+        securityContextHolderStrategy.context = context
+        securityContextRepository.saveContext(context, request, response)
+    }
 
-        val token = jwtService.generateToken(userId)
+    @PostMapping("/register")
+    fun register(@RequestBody request: RegisterRequest): ResponseEntity<String> {
+        if (userRepository.findByUsername(request.username) != null || userRepository.findByEmail(request.email) != null) {
+            return ResponseEntity.badRequest().body("Usuário ou Email já existem.")
+        }
 
-        return ApiResponse.success(LoginResponse(token))
+        val newUser = User().apply {
+            id = UUID.randomUUID()
+            username = request.username
+            email = request.email
+            passwordHash = passwordEncoder.encode(request.password)
+            role = "USER"
+        }
+
+        userRepository.save(newUser)
+        return ResponseEntity.ok("Usuário criado com sucesso!")
     }
 }

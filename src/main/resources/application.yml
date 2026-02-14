@@ -1,5 +1,5 @@
 server:
-    port: 8080
+    port: 9000
 spring:
     application:
         name: auth
@@ -26,7 +26,6 @@ spring:
                     google:
                         client-id: "google-client-id-temporario"
                         client-secret: "google-secret-temporario"
-                        # O Google é nativo do Spring, ele já sabe o grant-type e redirect-uri por padrão
                         scope:
                             - openid
                             - profile
