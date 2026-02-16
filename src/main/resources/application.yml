@@ -1,81 +1,86 @@
 server:
-    port: 9000
-spring:
-    application:
-        name: auth
-    datasource:
-        driver-class-name: org.postgresql.Driver
-        url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft"
-        username: "${DB_USERNAME:postgres}"
-        password: "${DB_PASSWORD:postgres}"
-        hikari:
-            max-lifetime: 540000
-    jpa:
-        database-platform: org.hibernate.dialect.PostgreSQLDialect
-    cache:
-        type: redis
-    data:
-        redis:
-            host: "${CACHE_HOST:localhost}"
-            port: "${CACHE_PORT:6379}"
-            password: "${CACHE_PASSWORD:}"
-    security:
-        oauth2:
-            client:
-                registration:
-                    google:
-                        client-id: "${GOOGLE_CLIENT_ID}"
-                        client-secret: "${GOOGLE_CLIENT_SECRET}"
-                        scope:
-                            - openid
-                            - profile
-                            - email
-                    
-                    microsoft:
-                        client-id: "${MICROSOFT_CLIENT_ID}"
-                        client-secret: "${MICROSOFT_CLIENT_SECRET}"
-                        provider: microsoft
-                        authorization-grant-type: authorization_code
-                        redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-                        scope:
-                            - openid
-                            - profile
-                            - email
-                
-                provider:
-                    microsoft:
-                        authorization-uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
-                        token-uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
-                        jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
-                        user-name-attribute: name
+  port: 9000
 
-# Propriedades para o JWTService manual
+spring:
+  application:
+    name: auth
+  mvc:
+    throw-exception-if-no-handler-found: true # Força 404 a virar exceção
+  web:
+    resources:
+      add-mappings: false # Não procurar por arquivos estáticos se não achar controller
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft"
+    username: "${DB_USERNAME:postgres}"
+    password: "${DB_PASSWORD:postgres}"
+    hikari:
+      max-lifetime: 540000
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  cache:
+    type: redis
+  data:
+    redis:
+      host: "${CACHE_HOST:localhost}"
+      port: "${CACHE_PORT:6379}"
+      password: "${CACHE_PASSWORD:}"
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "${GOOGLE_CLIENT_ID}"
+            client-secret: "${GOOGLE_CLIENT_SECRET}"
+            scope:
+              - openid
+              - profile
+              - email
+          
+          microsoft:
+            client-id: "${MICROSOFT_CLIENT_ID}"
+            client-secret: "${MICROSOFT_CLIENT_SECRET}"
+            provider: microsoft
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+        
+        provider:
+          microsoft:
+            authorization-uri: https://login.microsoftonline.com/common/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/common/oauth2/v2.0/token
+            jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+            user-name-attribute: name
+
 jwt:
   secret: "${JWT_SECRET}"
   expiration: 86400000 # 24 horas em milissegundos
 
 quintilis:
-    oauth2:
-        clients:
-            - clientId: "forum-frontend"
-              clientSecret: "{noop}secret-forum" # Segredo único
-              redirectUris:
-                  - "http://localhost:5173/authorized"
-                  - "https://forum.quintilis.org/authorized"
-              scopes:
-                  - "openid"
-                  - "read_profile"
-            - clientId: "map-frontend"
-              clientSecret: "{noop}secret-map" # Segredo único
-              redirectUris:
-                  - "http://localhost:5174/authorized"
-                  - "https://map.quintilis.org/authorized"
-              scopes:
-                  - "openid"
-            - clientId: "oidc-debugger"
-              clientSecret: "{noop}secret-debugger" # Segredo único
-              redirectUris:
-                  - "https://oidcdebugger.com/debug"
-              scopes:
-                  - "openid"
-                  - "profile"
+  oauth2:
+    clients:
+      - clientId: "forum-frontend"
+        clientSecret: "{noop}secret-forum"
+        redirectUris:
+          - "http://localhost:5173/authorized"
+          - "https://forum.quintilis.org/authorized"
+        scopes:
+          - "openid"
+          - "read_profile"
+      - clientId: "map-frontend"
+        clientSecret: "{noop}secret-map"
+        redirectUris:
+          - "http://localhost:5174/authorized"
+          - "https://map.quintilis.org/authorized"
+        scopes:
+          - "openid"
+      - clientId: "oidc-debugger"
+        clientSecret: "{noop}secret-debugger"
+        redirectUris:
+          - "https://oidcdebugger.com/debug"
+        scopes:
+          - "openid"
+          - "profile"

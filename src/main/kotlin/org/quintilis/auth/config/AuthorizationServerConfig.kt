@@ -40,6 +40,8 @@ open class AuthorizationServerConfig {
     @Order(1)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
+        authorizationServerConfigurer.oidc(Customizer.withDefaults())
+
         http
             .securityMatcher(authorizationServerConfigurer.endpointsMatcher)
             .authorizeHttpRequests { authorize -> authorize.anyRequest().authenticated() }
@@ -52,6 +54,7 @@ open class AuthorizationServerConfig {
             }
             .oauth2ResourceServer { resourceServer -> resourceServer.jwt(Customizer.withDefaults()) }
             .with(authorizationServerConfigurer, Customizer.withDefaults())
+            
         return http.build()
     }
 
@@ -66,7 +69,12 @@ open class AuthorizationServerConfig {
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                 .redirectUris { uris -> uris.addAll(client.redirectUris) }
                 .scopes { scopes -> scopes.addAll(client.scopes) }
-                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
+                .clientSettings(
+                    ClientSettings.builder()
+                        .requireAuthorizationConsent(false)
+                        .requireProofKey(false) // Desabilita a exigência de PKCE
+                        .build()
+                )
                 .build()
         }
         return InMemoryRegisteredClientRepository(registeredClients)

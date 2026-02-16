@@ -15,9 +15,9 @@ import org.springframework.security.web.SecurityFilterChain
 
 @Configuration
 @EnableWebSecurity
-open class SecurityConfig( // Adicionado 'open'
+open class SecurityConfig(
     private val customOidcUserService: CustomOidcUserService,
-    private val oAuth2SuccessHandler: OAuth2SuccessHandler
+    private val oAuth2SuccessHandler: OAuth2SuccessHandler // Reintroduzido
 ) {
 
     @Bean
@@ -37,7 +37,7 @@ open class SecurityConfig( // Adicionado 'open'
             .formLogin { form ->
                 form.loginPage("/login")
                     .loginProcessingUrl("/login")
-                    .defaultSuccessUrl("/profile", true)
+                    .successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
                     .permitAll()
             }
             .oauth2Login { oauth ->
@@ -45,7 +45,7 @@ open class SecurityConfig( // Adicionado 'open'
                 oauth.userInfoEndpoint { userInfo ->
                     userInfo.oidcUserService(customOidcUserService)
                 }
-                oauth.successHandler(oAuth2SuccessHandler)
+                oauth.successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
             }
             .csrf { it.disable() }
 
