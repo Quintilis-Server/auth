@@ -1,0 +1,93 @@
+@use "TextStyle";
+@use "ScrollBarStyle";
+@use "AnimationStyle";
+
+:root {
+    /* Colors */
+    --bg-primary: #0a0a12;
+    --bg-secondary: #0f0f1a;
+    --bg-card: #12121f;
+    --bg-card-hover: #181830;
+    
+    --text-primary: #e8e8f0;
+    --text-secondary: #8a8a9a;
+    --text-muted: #55556a;
+    
+    --accent: #8B8CC7;
+    --accent-light: #a8a9d8;
+    --accent-dim: #6363a0;
+    --accent-glow: rgba(139, 140, 199, 0.15);
+    --accent-glow-strong: rgba(139, 140, 199, 0.3);
+    
+    --border: rgba(255, 255, 255, 0.06);
+    --border-hover: rgba(139, 140, 199, 0.2);
+    
+    /* Typography */
+    --font-heading: 'Cormorant Garamond', 'Georgia', serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    
+    /* Spacing */
+    --section-padding: clamp(80px, 12vh, 160px);
+    --container-max: 1200px;
+    --container-padding: clamp(20px, 5vw, 80px);
+    
+    /* Transitions */
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --transition-fast: 0.2s var(--ease-out);
+    --transition-medium: 0.4s var(--ease-out);
+    --transition-slow: 0.8s var(--ease-out);
+}
+
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-body);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+#root {
+    width: 100%;
+}
+
+.container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+}
+
+.section-header{
+    text-align: center;
+    margin-bottom: 80px;
+}
+.section-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--accent-color);
+    margin-bottom: 20px;
+}
+.section-title{
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    color: var(--text-primary);
+}
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    animation: pulse-glow 8s ease-in-out infinite alternate;
+}
