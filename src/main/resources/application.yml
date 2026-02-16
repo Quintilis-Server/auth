@@ -5,10 +5,10 @@ spring:
   application:
     name: auth
   mvc:
-    throw-exception-if-no-handler-found: true # Força 404 a virar exceção
+    throw-exception-if-no-handler-found: true
   web:
     resources:
-      add-mappings: false # Não procurar por arquivos estáticos se não achar controller
+      add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
     url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft"
@@ -57,7 +57,10 @@ spring:
 
 jwt:
   secret: "${JWT_SECRET}"
-  expiration: 86400000 # 24 horas em milissegundos
+  expiration: 86400000
+
+frontend:
+  url: "${FRONTEND_URL:http://localhost:3000}"
 
 quintilis:
   oauth2:
@@ -81,6 +84,7 @@ quintilis:
         clientSecret: "{noop}secret-debugger"
         redirectUris:
           - "https://oidcdebugger.com/debug"
+          - "http://localhost:8080/api/forum/category/all" # Adicionado para teste
         scopes:
           - "openid"
           - "profile"

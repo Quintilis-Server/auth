@@ -1,5 +1,5 @@
 import React from 'react';
-import '../stylesheet/BaseStyle.scss';
+import '../stylesheet/RegisterPage.scss';
 
 const RegisterPage: React.FC = () => {
     return (

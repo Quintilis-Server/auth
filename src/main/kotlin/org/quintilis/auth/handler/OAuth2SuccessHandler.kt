@@ -3,6 +3,7 @@ package org.quintilis.auth.handler
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import org.quintilis.auth.service.JWTService
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.UserDetailsService
@@ -18,13 +19,14 @@ class OAuth2SuccessHandler(
     private val userDetailsService: UserDetailsService
 ) : SavedRequestAwareAuthenticationSuccessHandler() {
 
+    private val logger = LoggerFactory.getLogger(OAuth2SuccessHandler::class.java)
+
     @Value("\${frontend.url:http://localhost:3000}")
     private lateinit var frontendUrl: String
 
     private val requestCache = HttpSessionRequestCache()
 
     init {
-        // Define uma URL padrão para o caso de login direto (sem requisição salva)
         setTargetUrlParameter("targetUrl")
         defaultTargetUrl = "/"
     }
@@ -36,15 +38,16 @@ class OAuth2SuccessHandler(
     ) {
         val savedRequest = requestCache.getRequest(request, response)
 
-        // Se existe uma requisição salva, significa que o login foi iniciado por um fluxo
-        // como o /oauth2/authorize. Deixamos o Spring continuar o fluxo padrão.
+//        logger.info("Authentication Success. SavedRequest: {}", savedRequest?.redirectUrl)
+
         if (savedRequest != null) {
+//            logger.info("Redirecionando para a requisição salva: {}", savedRequest.redirectUrl)
             super.onAuthenticationSuccess(request, response, authentication)
             return
         }
 
-        // Se NÃO existe requisição salva, é um login direto.
-        // Neste caso, geramos nosso token JWT e redirecionamos para o nosso frontend.
+//        logger.info("Nenhuma requisição salva encontrada. Iniciando fluxo de login direto.")
+
         val email = if (authentication is OAuth2AuthenticationToken) {
             authentication.principal?.attributes["email"]?.toString()
         } else {
@@ -52,6 +55,7 @@ class OAuth2SuccessHandler(
         }
 
         if (email == null) {
+//            logger.error("Email não encontrado na autenticação.")
             super.onAuthenticationSuccess(request, response, authentication)
             return
         }
@@ -59,11 +63,12 @@ class OAuth2SuccessHandler(
         val userDetails = userDetailsService.loadUserByUsername(email)
         val token = jwtService.generateToken(userDetails)
 
-        // Redireciona para o frontend com o token
         val redirectUrl = UriComponentsBuilder.fromUriString(frontendUrl)
             .path("/oauth2/callback")
             .queryParam("token", token)
             .build().toUriString()
+
+//        logger.info("Redirecionando para o frontend com token: {}", redirectUrl)
 
         clearAuthenticationAttributes(request)
         redirectStrategy.sendRedirect(request, response, redirectUrl)

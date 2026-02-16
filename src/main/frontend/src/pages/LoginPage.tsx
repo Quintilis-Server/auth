@@ -1,5 +1,5 @@
 import React from 'react';
-import '../stylesheet/BaseStyle.scss'; // Importando o SCSS global
+import "../stylesheet/LoginPage.scss"
 
 const LoginPage: React.FC = () => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -8,9 +8,12 @@ const LoginPage: React.FC = () => {
     const hasSuccess = queryParams.has('success');
 
     return (
-        <div className="page-container">
+        <main className="page-container">
             <div className="auth-card">
-                <h2 className="auth-title">Quintilis ID</h2>
+                <h2 className="auth-title">
+                    <span>Q</span>
+                    <span>uintilis ID</span>
+                </h2>
 
                 {hasError && <div className="alert alert-error">Usuário ou senha inválidos.</div>}
                 {hasLogout && <div className="alert alert-success">Você saiu com sucesso.</div>}
@@ -45,7 +48,7 @@ const LoginPage: React.FC = () => {
                     Não tem conta? <a href="/register">Registre-se</a>
                 </p>
             </div>
-        </div>
+        </main>
     );
 };
 

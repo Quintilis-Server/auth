@@ -1,0 +1,21 @@
+@use "LoginPage";
+
+// RegisterPage uses the same styling as LoginPage
+// All styles are inherited from LoginPage.scss
+// Add any register-specific customizations below if needed
+
+.page-container {
+    .auth-card {
+        .auth-title {
+            // Override for simple title format (no special Q styling)
+            display: block;
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 2.2rem;
+            font-weight: 300;
+            color: var(--text-primary);
+            margin-bottom: 32px;
+            letter-spacing: 0.02em;
+        }
+    }
+}
