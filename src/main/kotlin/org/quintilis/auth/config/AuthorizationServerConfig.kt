@@ -5,6 +5,8 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
+import org.quintilis.auth.config.properties.ClientSettingsProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -15,7 +17,6 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod
-import org.springframework.security.oauth2.core.oidc.OidcScopes
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
@@ -32,60 +33,43 @@ import java.util.UUID
 
 @Configuration
 @EnableWebSecurity
-class AuthorizationServerConfig {
+@EnableConfigurationProperties(ClientSettingsProperties::class)
+open class AuthorizationServerConfig {
 
     @Bean
     @Order(1)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
-        val endpointsMatcher = authorizationServerConfigurer.endpointsMatcher
-
         http
-            .securityMatcher(endpointsMatcher)
-            .authorizeHttpRequests { authorize ->
-                authorize.anyRequest().authenticated()
-            }
-            .csrf { csrf ->
-                csrf.ignoringRequestMatchers(endpointsMatcher)
-            }
-            .with(authorizationServerConfigurer, Customizer.withDefaults())
-
-        authorizationServerConfigurer.oidc(Customizer.withDefaults())
-
-        http
+            .securityMatcher(authorizationServerConfigurer.endpointsMatcher)
+            .authorizeHttpRequests { authorize -> authorize.anyRequest().authenticated() }
+            .csrf { csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher) }
             .exceptionHandling { exceptions ->
                 exceptions.defaultAuthenticationEntryPointFor(
                     LoginUrlAuthenticationEntryPoint("/login"),
                     MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                 )
             }
-            .oauth2ResourceServer { resourceServer ->
-                resourceServer.jwt(Customizer.withDefaults())
-            }
-
+            .oauth2ResourceServer { resourceServer -> resourceServer.jwt(Customizer.withDefaults()) }
+            .with(authorizationServerConfigurer, Customizer.withDefaults())
         return http.build()
     }
 
     @Bean
-    fun registeredClientRepository(): RegisteredClientRepository {
-        val frontendClient = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("quintilis-frontend")
-            .clientSecret("{noop}secret-frontend")
-            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .redirectUri("http://localhost:3000/authorized")
-            .redirectUri("https://oauth.pstmn.io/v1/callback")
-            .redirectUri("https://oidcdebugger.com/debug")
-            .scope(OidcScopes.OPENID)
-            .scope(OidcScopes.PROFILE)
-            .clientSettings(ClientSettings.builder()
-                .requireAuthorizationConsent(false) // <--- Alterado para false (sem tela de consentimento)
-                .requireProofKey(false)
-                .build())
-            .build()
-
-        return InMemoryRegisteredClientRepository(frontendClient)
+    fun registeredClientRepository(clientSettings: ClientSettingsProperties): RegisteredClientRepository {
+        val registeredClients = clientSettings.clients.map { client ->
+            RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId(client.clientId)
+                .clientSecret(client.clientSecret)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .redirectUris { uris -> uris.addAll(client.redirectUris) }
+                .scopes { scopes -> scopes.addAll(client.scopes) }
+                .clientSettings(ClientSettings.builder().requireAuthorizationConsent(false).build())
+                .build()
+        }
+        return InMemoryRegisteredClientRepository(registeredClients)
     }
 
     @Bean

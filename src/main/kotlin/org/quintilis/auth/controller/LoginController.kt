@@ -1,13 +1,4 @@
 package org.quintilis.auth.controller
 
-import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.GetMapping
-
-@Controller
-class LoginController {
-
-    @GetMapping("/login")
-    fun login(): String {
-        return "login" // Retorna o template 'login.html'
-    }
-}
+// Este controller foi desativado para evitar conflito com o SpaController,
+// que agora serve a página de login do React.

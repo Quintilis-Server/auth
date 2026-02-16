@@ -1,40 +1,59 @@
 package org.quintilis.auth.service
 
+import io.jsonwebtoken.Claims
 import io.jsonwebtoken.Jwts
-import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.security.Keys
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Service
-import java.util.Date
+import java.util.*
 import javax.crypto.SecretKey
 
 @Service
 class JWTService {
-    @Value("\${jwt.secret:uma-chave-secreta-muito-longa-para-o-projeto-quintilis}")
-    private lateinit var secretString: String
 
-    @Value("\${jwt.expiration:640000}")
-    private val expirationTime: Long = 0L
+    @Value("\${jwt.secret}")
+    private lateinit var secret: String
 
-    private val secretKey: SecretKey by lazy {
-        Keys.hmacShaKeyFor(secretString.toByteArray())
+    @Value("\${jwt.expiration}")
+    private lateinit var expiration: String
+
+    private fun getSigningKey(): SecretKey {
+        return Keys.hmacShaKeyFor(secret.toByteArray())
     }
 
-    fun generateToken(userId: String): String {
-        return Jwts.builder()
-            .subject(userId)
-            .issuedAt(Date())
-            .expiration(Date(System.currentTimeMillis() + expirationTime))
-            .signWith(secretKey)
-            .compact()
-    }
-
-    fun extractUserId(token: String): String {
+    fun extractAllClaims(token: String): Claims {
         return Jwts.parser()
-            .verifyWith(secretKey)
+            .verifyWith(getSigningKey())
             .build()
             .parseSignedClaims(token)
             .payload
-            .subject
+    }
+
+    fun extractUsername(token: String): String {
+        return extractAllClaims(token).subject
+    }
+
+    fun isTokenValid(token: String, userDetails: UserDetails): Boolean {
+        val username = extractUsername(token)
+        return (username == userDetails.username && !isTokenExpired(token))
+    }
+
+    private fun isTokenExpired(token: String): Boolean {
+        return extractAllClaims(token).expiration.before(Date())
+    }
+
+    fun generateToken(userDetails: UserDetails): String {
+        val claims = Jwts.claims()
+            .subject(userDetails.username)
+            .add("authorities", userDetails.authorities)
+            .build()
+
+        return Jwts.builder()
+            .claims(claims)
+            .issuedAt(Date(System.currentTimeMillis()))
+            .expiration(Date(System.currentTimeMillis() + expiration.toLong()))
+            .signWith(getSigningKey())
+            .compact()
     }
 }

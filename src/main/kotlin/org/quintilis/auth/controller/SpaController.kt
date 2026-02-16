@@ -1,15 +1,4 @@
 package org.quintilis.auth.controller
 
-import org.springframework.stereotype.Controller
-import org.springframework.web.bind.annotation.RequestMapping
-
-@Controller
-class SpaController {
-
-    // Redireciona rotas do frontend para o index.html do React
-    // Exclui /api, /oauth2, /login (POST), /register (POST) e arquivos estáticos
-    @RequestMapping(value = ["/{path:[^\\.]*}", "/login", "/register"])
-    fun redirect(): String {
-        return "forward:/index.html"
-    }
-}
+// Este controller foi desativado e substituído pela configuração em WebConfig.kt,
+// que é uma abordagem mais robusta para servir Single Page Applications (SPA) com Spring Boot.
