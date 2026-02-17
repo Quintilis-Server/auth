@@ -2,8 +2,10 @@ package org.quintilis.auth.service
 
 import org.quintilis.common.entities.auth.User
 import org.quintilis.common.repositories.UserRepository
+import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Service
@@ -13,6 +15,9 @@ import java.util.UUID
 class CustomOAuth2Service(
     private val userRepository: UserRepository
 ): DefaultOAuth2UserService() {
+
+    private val logger = LoggerFactory.getLogger(CustomOAuth2Service::class.java)
+
     override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User? {
         println("--- INICIANDO LOGIN SOCIAL ---")
         val oauthUser = super.loadUser(userRequest)
@@ -28,29 +33,34 @@ class CustomOAuth2Service(
 
         println("Email: $email | Name: $name | ProviderID: $providerId")
 
-        if (email.isEmpty()) {
-            println("ERRO: Email não retornado pelo provedor.")
+        if (email.isNullOrEmpty()) {
+            logger.error("ERRO: Email não retornado pelo provedor.")
+            throw OAuth2AuthenticationException("Email not provided by OAuth2 provider")
         }
 
-        var user = if(provider == "google") {
-            userRepository.findByGoogleId(providerId)
-        } else {
-            userRepository.findByMicrosoftId(providerId)
+        // 1. Tenta buscar pelo ID Social primeiro (Login rápido)
+        var user: User? = when (provider) {
+            "google" -> userRepository.findByGoogleId(providerId)
+            "microsoft" -> userRepository.findByMicrosoftId(providerId)
+            else -> null
         }
 
         if (user != null) {
             println("Usuário encontrado pelo ID Social: ${user.username}")
         }
 
-        if(user == null && email.isNotEmpty()){
-            println("Usuário não encontrado pelo ID. Tentando buscar por email: $email")
+        if (user == null) {
+            logger.info("Usuário não encontrado pelo ID Social. Buscando por email: $email")
             user = userRepository.findByEmail(email)
-            if(user != null){
-                println("Usuário encontrado por email. Vinculando conta...")
-                if(provider == "google") user.googleId = providerId
-                if(provider == "microsoft") user.microsoftId = providerId
-                userRepository.save(user)
-                println("Conta vinculada com sucesso.")
+
+            if (user != null) {
+                logger.info("Conta local encontrada! Vinculando ao provedor $provider...")
+                when (provider) {
+                    "google" -> user.googleId = providerId
+                    "microsoft" -> user.microsoftId = providerId
+                }
+                user = userRepository.save(user)
+                logger.info("Conta vinculada com sucesso.")
             }
         }
 
