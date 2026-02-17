@@ -37,16 +37,12 @@ class OAuth2SuccessHandler(
         authentication: Authentication
     ) {
         val savedRequest = requestCache.getRequest(request, response)
+        val savedRedirectUrl = savedRequest?.redirectUrl
 
-//        logger.info("Authentication Success. SavedRequest: {}", savedRequest?.redirectUrl)
-
-        if (savedRequest != null) {
-//            logger.info("Redirecionando para a requisição salva: {}", savedRequest.redirectUrl)
+        if (savedRedirectUrl != null && !savedRedirectUrl.contains("auth.quintilis.org")) {
             super.onAuthenticationSuccess(request, response, authentication)
             return
         }
-
-//        logger.info("Nenhuma requisição salva encontrada. Iniciando fluxo de login direto.")
 
         val email = if (authentication is OAuth2AuthenticationToken) {
             authentication.principal?.attributes["email"]?.toString()
@@ -55,7 +51,6 @@ class OAuth2SuccessHandler(
         }
 
         if (email == null) {
-//            logger.error("Email não encontrado na autenticação.")
             super.onAuthenticationSuccess(request, response, authentication)
             return
         }
@@ -67,8 +62,6 @@ class OAuth2SuccessHandler(
             .path("/oauth2/callback")
             .queryParam("token", token)
             .build().toUriString()
-
-//        logger.info("Redirecionando para o frontend com token: {}", redirectUrl)
 
         clearAuthenticationAttributes(request)
         redirectStrategy.sendRedirect(request, response, redirectUrl)

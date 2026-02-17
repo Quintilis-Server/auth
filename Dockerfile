@@ -12,16 +12,15 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy common module first for better layer caching
+# 1. Copia o código dos dois módulos inteiros
 COPY common ./common
-COPY auth/pom.xml ./auth/
-COPY auth/.mvn ./auth/.mvn
-COPY auth/mvnw ./auth/
+COPY auth ./auth
 
-# Copy auth source and frontend
-COPY auth/src ./auth/src
+# 2. Instala o módulo Common primeiro (para que o Auth consiga achá-lo)
+WORKDIR /workspace/common
+RUN mvn clean install -DskipTests
 
-# Build the application (this will also build the React frontend via maven plugins)
+# 3. Compila o Auth (Isso também vai buildar o React via plugin do Maven)
 WORKDIR /workspace/auth
 RUN mvn clean package -DskipTests
 
