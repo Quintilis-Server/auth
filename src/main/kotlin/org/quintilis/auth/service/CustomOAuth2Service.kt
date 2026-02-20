@@ -1,5 +1,6 @@
 package org.quintilis.auth.service
 
+import java.util.UUID
 import org.quintilis.common.entities.auth.User
 import org.quintilis.common.repositories.UserRepository
 import org.slf4j.LoggerFactory
@@ -9,12 +10,9 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Service
-import java.util.UUID
 
 @Service
-class CustomOAuth2Service(
-    private val userRepository: UserRepository
-): DefaultOAuth2UserService() {
+class CustomOAuth2Service(private val userRepository: UserRepository) : DefaultOAuth2UserService() {
 
     private val logger = LoggerFactory.getLogger(CustomOAuth2Service::class.java)
 
@@ -39,11 +37,12 @@ class CustomOAuth2Service(
         }
 
         // 1. Tenta buscar pelo ID Social primeiro (Login rápido)
-        var user: User? = when (provider) {
-            "google" -> userRepository.findByGoogleId(providerId)
-            "microsoft" -> userRepository.findByMicrosoftId(providerId)
-            else -> null
-        }
+        var user: User? =
+                when (provider) {
+                    "google" -> userRepository.findByGoogleId(providerId)
+                    "microsoft" -> userRepository.findByMicrosoftId(providerId)
+                    else -> null
+                }
 
         if (user != null) {
             println("Usuário encontrado pelo ID Social: ${user.username}")
@@ -64,12 +63,16 @@ class CustomOAuth2Service(
             }
         }
 
-        if(user == null){
+        if (user == null) {
             println("Usuário não existe. Criando nova conta...")
             try {
                 val newUser = User()
                 newUser.id = UUID.randomUUID() // Forçando ID se o banco não gerar
-                newUser.username = name.replace(" ", "_").lowercase() + "_" + (1000..9999).random()
+                var desiredUsername = name
+                if (userRepository.findByUsername(desiredUsername) != null) {
+                    desiredUsername = name + "_" + (1000..9999).random()
+                }
+                newUser.username = desiredUsername
                 newUser.email = email
                 newUser.role = "USER"
                 newUser.isVerified = true // Login social geralmente já é verificado
@@ -80,7 +83,7 @@ class CustomOAuth2Service(
                 if (provider == "microsoft") {
                     newUser.microsoftId = providerId
                 }
-                
+
                 user = userRepository.save(newUser)
                 println("Novo usuário salvo no banco: ${user.id} - ${user.username}")
             } catch (e: Exception) {
@@ -91,9 +94,9 @@ class CustomOAuth2Service(
         }
 
         return DefaultOAuth2User(
-            oauthUser.authorities,
-            attributes.plus("internal_user_id" to user.id.toString()),
-            "email" // Define qual atributo é o "nome principal"
+                oauthUser.authorities,
+                attributes.plus("internal_user_id" to user.id.toString()),
+                "email" // Define qual atributo é o "nome principal"
         )
     }
 }

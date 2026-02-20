@@ -10,72 +10,71 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class CustomOidcUserService(
-    private val userRepository: UserRepository
-) : OidcUserService() {
+class CustomOidcUserService(private val userRepository: UserRepository) : OidcUserService() {
 
     @Transactional
     override fun loadUser(userRequest: OidcUserRequest): OidcUser {
         val oidcUser = super.loadUser(userRequest)
         val provider = userRequest.clientRegistration.registrationId
-        
+
         val attributes = oidcUser.attributes
         val email = attributes["email"]?.toString() ?: ""
         val name = attributes["name"]?.toString() ?: "Usuario"
         val providerId = attributes["sub"]?.toString() ?: ""
 
-        var user = if(provider == "google") {
-            userRepository.findByGoogleId(providerId)
-        } else {
-            userRepository.findByMicrosoftId(providerId)
-        }
+        var user =
+                if (provider == "google") {
+                    userRepository.findByGoogleId(providerId)
+                } else {
+                    userRepository.findByMicrosoftId(providerId)
+                }
 
         if (user != null) {
             return DefaultOidcUser(
-                oidcUser.authorities,
-                oidcUser.idToken,
-                oidcUser.userInfo,
-                "email"
+                    oidcUser.authorities,
+                    oidcUser.idToken,
+                    oidcUser.userInfo,
+                    "email"
             )
         }
 
-        if(email.isNotEmpty()){
+        if (email.isNotEmpty()) {
             user = userRepository.findByEmail(email)
-            if(user != null){
+            if (user != null) {
                 var changed = false
-                if(provider == "google" && user.googleId != providerId) {
+                if (provider == "google" && user.googleId != providerId) {
                     user.googleId = providerId
                     changed = true
                 }
-                if(provider == "microsoft" && user.microsoftId != providerId) {
+                if (provider == "microsoft" && user.microsoftId != providerId) {
                     user.microsoftId = providerId
                     changed = true
                 }
-                
+
                 if (changed) {
                     userRepository.saveAndFlush(user)
                 }
             }
         }
 
-        if(user == null){
-            val newUser = User().apply {
-                // ID removido: Deixa o Hibernate/Banco gerar
-                this.username = name.replace(" ", "_").lowercase() + "_" + (1000..9999).random()
-                this.email = email
-                this.role = "USER"
-//                this.isVerified = true
-                if (provider == "google") this.googleId = providerId
-                if (provider == "microsoft") this.microsoftId = providerId
-            }
+        if (user == null) {
+            val newUser =
+                    User().apply {
+                        // ID removido: Deixa o Hibernate/Banco gerar
+                        var desiredUsername = name
+                        if (userRepository.findByUsername(desiredUsername) != null) {
+                            desiredUsername = name + "_" + (1000..9999).random()
+                        }
+                        this.username = desiredUsername
+                        this.email = email
+                        this.role = "USER"
+                        //                this.isVerified = true
+                        if (provider == "google") this.googleId = providerId
+                        if (provider == "microsoft") this.microsoftId = providerId
+                    }
             user = userRepository.saveAndFlush(newUser)
         }
 
-        return DefaultOidcUser(
-            oidcUser.authorities,
-            oidcUser.idToken,
-            oidcUser.userInfo,
-            "email"
-        )
+        return DefaultOidcUser(oidcUser.authorities, oidcUser.idToken, oidcUser.userInfo, "email")
     }
 }

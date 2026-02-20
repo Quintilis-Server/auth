@@ -4,8 +4,8 @@ server:
 spring:
   application:
     name: auth
-  mvc:
-    throw-exception-if-no-handler-found: true
+#  mvc:
+#    throw-exception-if-no-handler-found: true
   web:
     resources:
       add-mappings: false
@@ -63,10 +63,17 @@ frontend:
   url: "${FRONTEND_URL:http://localhost:3000}"
 
 quintilis:
+  cors:
+    allowed-origins:
+      - "http://localhost:5173"
+      - "http://localhost:3000"
+      - "https://*.quintilis.org"
+      - "http://localhost:*"
+
   oauth2:
     clients:
       - clientId: "forum-frontend"
-        clientSecret: "{noop}secret-forum"
+        clientSecret: "secret-forum"
         redirectUris:
           - "http://localhost:5173/authorized"
           - "https://forum.quintilis.org/authorized"
@@ -74,14 +81,14 @@ quintilis:
           - "openid"
           - "read_profile"
       - clientId: "map-frontend"
-        clientSecret: "{noop}secret-map"
+        clientSecret: "secret-map"
         redirectUris:
           - "http://localhost:5174/authorized"
           - "https://map.quintilis.org/authorized"
         scopes:
           - "openid"
       - clientId: "oidc-debugger"
-        clientSecret: "{noop}secret-debugger"
+        clientSecret: "secret-debugger"
         redirectUris:
           - "https://oidcdebugger.com/debug"
           - "http://localhost:8080/api/forum/category/all" # Adicionado para teste

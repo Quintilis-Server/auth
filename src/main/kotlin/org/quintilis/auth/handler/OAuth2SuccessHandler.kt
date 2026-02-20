@@ -9,22 +9,18 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache
 import org.springframework.stereotype.Component
 import org.springframework.web.util.UriComponentsBuilder
 
 @Component
 class OAuth2SuccessHandler(
-    private val jwtService: JWTService,
-    private val userDetailsService: UserDetailsService
+        private val jwtService: JWTService,
+        private val userDetailsService: UserDetailsService
 ) : SavedRequestAwareAuthenticationSuccessHandler() {
 
     private val logger = LoggerFactory.getLogger(OAuth2SuccessHandler::class.java)
 
-    @Value("\${frontend.url:http://localhost:3000}")
-    private lateinit var frontendUrl: String
-
-    private val requestCache = HttpSessionRequestCache()
+    @Value("\${frontend.url:http://localhost:3000}") private lateinit var frontendUrl: String
 
     init {
         setTargetUrlParameter("targetUrl")
@@ -32,23 +28,28 @@ class OAuth2SuccessHandler(
     }
 
     override fun onAuthenticationSuccess(
-        request: HttpServletRequest,
-        response: HttpServletResponse,
-        authentication: Authentication
+            request: HttpServletRequest,
+            response: HttpServletResponse,
+            authentication: Authentication
     ) {
-        val savedRequest = requestCache.getRequest(request, response)
+        val savedRequest =
+                request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as?
+                        org.springframework.security.web.savedrequest.DefaultSavedRequest
         val savedRedirectUrl = savedRequest?.redirectUrl
 
-        if (savedRedirectUrl != null && !savedRedirectUrl.contains("auth.quintilis.org")) {
-            super.onAuthenticationSuccess(request, response, authentication)
+        if (savedRedirectUrl != null && savedRedirectUrl.contains("/oauth2/authorize")) {
+            request.session?.removeAttribute("SPRING_SECURITY_SAVED_REQUEST")
+            clearAuthenticationAttributes(request)
+            redirectStrategy.sendRedirect(request, response, savedRedirectUrl)
             return
         }
 
-        val email = if (authentication is OAuth2AuthenticationToken) {
-            authentication.principal?.attributes["email"]?.toString()
-        } else {
-            authentication.name
-        }
+        val email =
+                if (authentication is OAuth2AuthenticationToken) {
+                    authentication.principal?.attributes["email"]?.toString()
+                } else {
+                    authentication.name
+                }
 
         if (email == null) {
             super.onAuthenticationSuccess(request, response, authentication)
@@ -58,10 +59,12 @@ class OAuth2SuccessHandler(
         val userDetails = userDetailsService.loadUserByUsername(email)
         val token = jwtService.generateToken(userDetails)
 
-        val redirectUrl = UriComponentsBuilder.fromUriString(frontendUrl)
-            .path("/oauth2/callback")
-            .queryParam("token", token)
-            .build().toUriString()
+        val redirectUrl =
+                UriComponentsBuilder.fromUriString(frontendUrl)
+                        .path("/oauth2/callback")
+                        .queryParam("token", token)
+                        .build()
+                        .toUriString()
 
         clearAuthenticationAttributes(request)
         redirectStrategy.sendRedirect(request, response, redirectUrl)
