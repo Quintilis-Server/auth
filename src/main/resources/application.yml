@@ -11,7 +11,7 @@ spring:
       add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft"
+    url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft?currentSchema=auth"
     username: "${DB_USERNAME:postgres}"
     password: "${DB_PASSWORD:postgres}"
     hikari:
@@ -80,6 +80,7 @@ quintilis:
         scopes:
           - "openid"
           - "read_profile"
+          - "offline_access"
       - clientId: "map-frontend"
         clientSecret: "secret-map"
         redirectUris:
@@ -87,6 +88,16 @@ quintilis:
           - "https://map.quintilis.org/authorized"
         scopes:
           - "openid"
+          - "offline_access"
+      - clientId: "admin-frontend"
+        clientSecret: "secret-admin"
+        redirectUris:
+          - "http://localhost:5174/authorized"
+          - "https://admin.quintilis.org/authorized"
+        scopes:
+          - "openid"
+          - "read_profile"
+          - "offline_access"
       - clientId: "oidc-debugger"
         clientSecret: "secret-debugger"
         redirectUris:

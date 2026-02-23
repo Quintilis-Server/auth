@@ -5,10 +5,16 @@ import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
 import com.nimbusds.jose.jwk.source.JWKSource
 import com.nimbusds.jose.proc.SecurityContext
+import java.io.File
+import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.interfaces.RSAPrivateKey
 import java.security.interfaces.RSAPublicKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
+import java.time.Duration
+import java.util.Base64
 import java.util.UUID
 import org.quintilis.auth.config.properties.ClientSettingsProperties
 import org.quintilis.auth.config.properties.CorsProperties
@@ -17,6 +23,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.MediaType
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -24,11 +31,16 @@ import org.springframework.security.config.annotation.web.configurers.oauth2.ser
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.core.AuthorizationGrantType
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationConsentService
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationConsentService
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService
 import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings
 import org.springframework.security.oauth2.server.authorization.settings.ClientSettings
+import org.springframework.security.oauth2.server.authorization.settings.TokenSettings
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.util.matcher.MediaTypeRequestMatcher
@@ -74,7 +86,9 @@ open class AuthorizationServerConfig {
     ): RegisteredClientRepository {
         val registeredClients =
                 clientSettings.clients.map { client ->
-                    RegisteredClient.withId(UUID.randomUUID().toString())
+                    RegisteredClient.withId(
+                                    UUID.nameUUIDFromBytes(client.clientId.toByteArray()).toString()
+                            )
                             .clientId(client.clientId)
                             .clientSecret(passwordEncoder.encode(client.clientSecret))
                             .clientAuthenticationMethod(
@@ -92,6 +106,13 @@ open class AuthorizationServerConfig {
                                             ) // Desabilita a exigência de PKCE
                                             .build()
                             )
+                            .tokenSettings(
+                                    TokenSettings.builder()
+                                            .accessTokenTimeToLive(Duration.ofHours(1))
+                                            .refreshTokenTimeToLive(Duration.ofDays(30))
+                                            .reuseRefreshTokens(true)
+                                            .build()
+                            )
                             .build()
                 }
         return InMemoryRegisteredClientRepository(registeredClients)
@@ -99,22 +120,63 @@ open class AuthorizationServerConfig {
 
     @Bean
     fun jwkSource(): JWKSource<SecurityContext> {
-        val keyPair = generateRsaKey()
+        val keyPair = getOrCreateRsaKey()
         val publicKey = keyPair.public as RSAPublicKey
         val privateKey = keyPair.private as RSAPrivateKey
         val rsaKey =
-                RSAKey.Builder(publicKey)
-                        .privateKey(privateKey)
-                        .keyID(UUID.randomUUID().toString())
-                        .build()
+                RSAKey.Builder(publicKey).privateKey(privateKey).keyID("quintilis-auth-key").build()
         val jwkSet = JWKSet(rsaKey)
         return ImmutableJWKSet(jwkSet)
     }
 
-    private fun generateRsaKey(): KeyPair {
+    private fun getOrCreateRsaKey(): KeyPair {
+        val keyDir = File(System.getProperty("user.home"), ".quintilis/keys")
+        val publicKeyFile = File(keyDir, "public.key")
+        val privateKeyFile = File(keyDir, "private.key")
+
+        if (publicKeyFile.exists() && privateKeyFile.exists()) {
+            val keyFactory = KeyFactory.getInstance("RSA")
+            val publicKey =
+                    keyFactory.generatePublic(
+                            X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyFile.readText()))
+                    ) as
+                            RSAPublicKey
+            val privateKey =
+                    keyFactory.generatePrivate(
+                            PKCS8EncodedKeySpec(
+                                    Base64.getDecoder().decode(privateKeyFile.readText())
+                            )
+                    ) as
+                            RSAPrivateKey
+            return KeyPair(publicKey, privateKey)
+        }
+
+        // Gera e salva novas chaves
+        keyDir.mkdirs()
         val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
         keyPairGenerator.initialize(2048)
-        return keyPairGenerator.generateKeyPair()
+        val keyPair = keyPairGenerator.generateKeyPair()
+
+        publicKeyFile.writeText(Base64.getEncoder().encodeToString(keyPair.public.encoded))
+        privateKeyFile.writeText(Base64.getEncoder().encodeToString(keyPair.private.encoded))
+
+        return keyPair
+    }
+
+    @Bean
+    fun authorizationService(
+            jdbcTemplate: JdbcTemplate,
+            registeredClientRepository: RegisteredClientRepository
+    ): OAuth2AuthorizationService {
+        return JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository)
+    }
+
+    @Bean
+    fun authorizationConsentService(
+            jdbcTemplate: JdbcTemplate,
+            registeredClientRepository: RegisteredClientRepository
+    ): OAuth2AuthorizationConsentService {
+        return JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository)
     }
 
     @Bean
