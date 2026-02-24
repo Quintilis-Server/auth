@@ -1,6 +1,7 @@
 package org.quintilis.auth.service
 
 import org.quintilis.common.entities.auth.User
+import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
@@ -10,7 +11,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
-class CustomOidcUserService(private val userRepository: UserRepository) : OidcUserService() {
+class CustomOidcUserService(
+        private val userRepository: UserRepository,
+        private val roleRepository: RoleRepository
+) : OidcUserService() {
 
     @Transactional
     override fun loadUser(userRequest: OidcUserRequest): OidcUser {
@@ -60,15 +64,16 @@ class CustomOidcUserService(private val userRepository: UserRepository) : OidcUs
         if (user == null) {
             val newUser =
                     User().apply {
-                        // ID removido: Deixa o Hibernate/Banco gerar
                         var desiredUsername = name
                         if (userRepository.findByUsername(desiredUsername) != null) {
                             desiredUsername = name + "_" + (1000..9999).random()
                         }
                         this.username = desiredUsername
                         this.email = email
-                        this.role = "USER"
-                        //                this.isVerified = true
+                        val defaultRole = roleRepository.findByName("USER")
+                        if (defaultRole != null) {
+                            this.roles.add(defaultRole)
+                        }
                         if (provider == "google") this.googleId = providerId
                         if (provider == "microsoft") this.microsoftId = providerId
                     }

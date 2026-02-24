@@ -1,6 +1,8 @@
 package org.quintilis.auth.controller
 
+import java.util.UUID
 import org.quintilis.common.entities.auth.User
+import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Controller
@@ -8,12 +10,12 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
-import java.util.UUID
 
 @Controller
 class RegisterController(
-    private val userRepository: UserRepository,
-    private val passwordEncoder: PasswordEncoder
+        private val userRepository: UserRepository,
+        private val roleRepository: RoleRepository,
+        private val passwordEncoder: PasswordEncoder
 ) {
 
     @GetMapping("/register")
@@ -23,10 +25,10 @@ class RegisterController(
 
     @PostMapping("/register")
     fun register(
-        @RequestParam username: String,
-        @RequestParam email: String,
-        @RequestParam password: String,
-        model: Model
+            @RequestParam username: String,
+            @RequestParam email: String,
+            @RequestParam password: String,
+            model: Model
     ): String {
         if (userRepository.findByUsername(username) != null) {
             model.addAttribute("error", "Usuário já existe.")
@@ -37,13 +39,18 @@ class RegisterController(
             return "register"
         }
 
-        val newUser = User().apply {
-            this.id = UUID.randomUUID()
-            this.username = username
-            this.email = email
-            this.passwordHash = passwordEncoder.encode(password)
-            this.role = "USER"
-        }
+        val defaultRole = roleRepository.findByName("USER")
+
+        val newUser =
+                User().apply {
+                    this.id = UUID.randomUUID()
+                    this.username = username
+                    this.email = email
+                    this.passwordHash = passwordEncoder.encode(password)
+                    if (defaultRole != null) {
+                        this.roles.add(defaultRole)
+                    }
+                }
 
         userRepository.save(newUser)
 

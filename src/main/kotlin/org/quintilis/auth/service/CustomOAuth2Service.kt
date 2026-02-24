@@ -2,6 +2,7 @@ package org.quintilis.auth.service
 
 import java.util.UUID
 import org.quintilis.common.entities.auth.User
+import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
@@ -12,7 +13,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Service
 
 @Service
-class CustomOAuth2Service(private val userRepository: UserRepository) : DefaultOAuth2UserService() {
+class CustomOAuth2Service(
+        private val userRepository: UserRepository,
+        private val roleRepository: RoleRepository
+) : DefaultOAuth2UserService() {
 
     private val logger = LoggerFactory.getLogger(CustomOAuth2Service::class.java)
 
@@ -74,7 +78,10 @@ class CustomOAuth2Service(private val userRepository: UserRepository) : DefaultO
                 }
                 newUser.username = desiredUsername
                 newUser.email = email
-                newUser.role = "USER"
+                val defaultRole = roleRepository.findByName("USER")
+                if (defaultRole != null) {
+                    newUser.roles.add(defaultRole)
+                }
                 newUser.isVerified = true // Login social geralmente já é verificado
 
                 if (provider == "google") {

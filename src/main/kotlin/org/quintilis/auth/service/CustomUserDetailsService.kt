@@ -23,7 +23,7 @@ class CustomUserDetailsService(private val userRepository: UserRepository) : Use
                                 user.id.toString()
                         ) // Usamos o ID como "username" interno do Spring Security
                         .password(user.passwordHash)
-                        .roles(user.role!!)
+                        .roles(*user.roles.mapNotNull { it.name }.toTypedArray())
                         .build()
         }
 }
