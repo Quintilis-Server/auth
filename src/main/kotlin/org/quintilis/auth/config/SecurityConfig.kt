@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.security.authentication.AuthenticationManager
-import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -15,6 +14,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.savedrequest.NullRequestCache
+import org.springframework.web.cors.CorsConfiguration
+import org.springframework.web.cors.CorsConfigurationSource
+
 
 @Configuration
 @EnableWebSecurity
@@ -37,13 +39,27 @@ open class SecurityConfig(
                                     "/login",
                                     "/register",
                                     "/auth/register",
+                                    "/auth/roles/**",
+                                    "/auth/roles",
+                                    "/auth/permissions",
+                                    "/auth/users",
+                                    "/auth/users/**",
                                     "/error",
                                     "/favicon.ico"
                             )
                             .permitAll()
                     auth.anyRequest().authenticated()
                 }
-                .cors(Customizer.withDefaults()) // Habilita CORS
+                .cors { cors ->
+                    cors.configurationSource { request ->
+                        CorsConfiguration().apply {
+                            allowedOriginPatterns = listOf("http://localhost:*", "https://*.quintilis.org")
+                            allowedMethods = listOf("*")
+                            allowedHeaders = listOf("*")
+                            allowCredentials = true
+                        }
+                    }
+                }
                 .formLogin { form ->
                     form.loginPage("/login")
                             .loginProcessingUrl("/login")

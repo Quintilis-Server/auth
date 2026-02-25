@@ -53,147 +53,170 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 @EnableConfigurationProperties(ClientSettingsProperties::class, CorsProperties::class)
 open class AuthorizationServerConfig {
 
-    @Bean
-    @Order(1)
-    fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
-        authorizationServerConfigurer.oidc(Customizer.withDefaults())
+        @Bean
+        @Order(1)
+        fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+                val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
+                authorizationServerConfigurer.oidc(Customizer.withDefaults())
 
-        http.securityMatcher(authorizationServerConfigurer.endpointsMatcher)
-                .authorizeHttpRequests { authorize -> authorize.anyRequest().authenticated() }
-                .csrf { csrf ->
-                    csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher)
-                }
-                .cors(Customizer.withDefaults()) // Habilita CORS
-                .exceptionHandling { exceptions ->
-                    exceptions.defaultAuthenticationEntryPointFor(
-                            LoginUrlAuthenticationEntryPoint("/login"),
-                            MediaTypeRequestMatcher(MediaType.TEXT_HTML)
-                    )
-                }
-                .oauth2ResourceServer { resourceServer ->
-                    resourceServer.jwt(Customizer.withDefaults())
-                }
-                .with(authorizationServerConfigurer, Customizer.withDefaults())
+                http.securityMatcher(authorizationServerConfigurer.endpointsMatcher)
+                        .authorizeHttpRequests { authorize ->
+                                authorize.anyRequest().authenticated()
+                        }
+                        .csrf { csrf ->
+                                csrf.ignoringRequestMatchers(
+                                        authorizationServerConfigurer.endpointsMatcher
+                                )
+                        }
+                        .cors(Customizer.withDefaults()) // Habilita CORS
+                        .exceptionHandling { exceptions ->
+                                exceptions.defaultAuthenticationEntryPointFor(
+                                        LoginUrlAuthenticationEntryPoint("/login"),
+                                        MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                                )
+                        }
+                        .oauth2ResourceServer { resourceServer ->
+                                resourceServer.jwt(Customizer.withDefaults())
+                        }
+                        .with(authorizationServerConfigurer, Customizer.withDefaults())
 
-        return http.build()
-    }
-
-    @Bean
-    fun registeredClientRepository(
-            clientSettings: ClientSettingsProperties,
-            passwordEncoder: PasswordEncoder
-    ): RegisteredClientRepository {
-        val registeredClients =
-                clientSettings.clients.map { client ->
-                    RegisteredClient.withId(
-                                    UUID.nameUUIDFromBytes(client.clientId.toByteArray()).toString()
-                            )
-                            .clientId(client.clientId)
-                            .clientSecret(passwordEncoder.encode(client.clientSecret))
-                            .clientAuthenticationMethod(
-                                    ClientAuthenticationMethod.CLIENT_SECRET_BASIC
-                            )
-                            .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-                            .redirectUris { uris -> uris.addAll(client.redirectUris) }
-                            .scopes { scopes -> scopes.addAll(client.scopes) }
-                            .clientSettings(
-                                    ClientSettings.builder()
-                                            .requireAuthorizationConsent(false)
-                                            .requireProofKey(
-                                                    false
-                                            ) // Desabilita a exigência de PKCE
-                                            .build()
-                            )
-                            .tokenSettings(
-                                    TokenSettings.builder()
-                                            .accessTokenTimeToLive(Duration.ofHours(1))
-                                            .refreshTokenTimeToLive(Duration.ofDays(30))
-                                            .reuseRefreshTokens(true)
-                                            .build()
-                            )
-                            .build()
-                }
-        return InMemoryRegisteredClientRepository(registeredClients)
-    }
-
-    @Bean
-    fun jwkSource(): JWKSource<SecurityContext> {
-        val keyPair = getOrCreateRsaKey()
-        val publicKey = keyPair.public as RSAPublicKey
-        val privateKey = keyPair.private as RSAPrivateKey
-        val rsaKey =
-                RSAKey.Builder(publicKey).privateKey(privateKey).keyID("quintilis-auth-key").build()
-        val jwkSet = JWKSet(rsaKey)
-        return ImmutableJWKSet(jwkSet)
-    }
-
-    private fun getOrCreateRsaKey(): KeyPair {
-        val keyDir = File(System.getProperty("user.home"), ".quintilis/keys")
-        val publicKeyFile = File(keyDir, "public.key")
-        val privateKeyFile = File(keyDir, "private.key")
-
-        if (publicKeyFile.exists() && privateKeyFile.exists()) {
-            val keyFactory = KeyFactory.getInstance("RSA")
-            val publicKey =
-                    keyFactory.generatePublic(
-                            X509EncodedKeySpec(Base64.getDecoder().decode(publicKeyFile.readText()))
-                    ) as
-                            RSAPublicKey
-            val privateKey =
-                    keyFactory.generatePrivate(
-                            PKCS8EncodedKeySpec(
-                                    Base64.getDecoder().decode(privateKeyFile.readText())
-                            )
-                    ) as
-                            RSAPrivateKey
-            return KeyPair(publicKey, privateKey)
+                return http.build()
         }
 
-        // Gera e salva novas chaves
-        keyDir.mkdirs()
-        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
-        keyPairGenerator.initialize(2048)
-        val keyPair = keyPairGenerator.generateKeyPair()
+        @Bean
+        fun registeredClientRepository(
+                clientSettings: ClientSettingsProperties,
+                passwordEncoder: PasswordEncoder
+        ): RegisteredClientRepository {
+                val registeredClients =
+                        clientSettings.clients.map { client ->
+                                RegisteredClient.withId(
+                                                UUID.nameUUIDFromBytes(
+                                                                client.clientId.toByteArray()
+                                                        )
+                                                        .toString()
+                                        )
+                                        .clientId(client.clientId)
+                                        .clientSecret(passwordEncoder.encode(client.clientSecret))
+                                        .clientAuthenticationMethod(
+                                                ClientAuthenticationMethod.CLIENT_SECRET_BASIC
+                                        )
+                                        .authorizationGrantType(
+                                                AuthorizationGrantType.AUTHORIZATION_CODE
+                                        )
+                                        .authorizationGrantType(
+                                                AuthorizationGrantType.REFRESH_TOKEN
+                                        )
+                                        .redirectUris { uris -> uris.addAll(client.redirectUris) }
+                                        .scopes { scopes -> scopes.addAll(client.scopes) }
+                                        .clientSettings(
+                                                ClientSettings.builder()
+                                                        .requireAuthorizationConsent(false)
+                                                        .requireProofKey(
+                                                                false
+                                                        ) // Desabilita a exigência de PKCE
+                                                        .build()
+                                        )
+                                        .tokenSettings(
+                                                TokenSettings.builder()
+                                                        .accessTokenTimeToLive(Duration.ofHours(1))
+                                                        .refreshTokenTimeToLive(Duration.ofDays(30))
+                                                        .reuseRefreshTokens(true)
+                                                        .build()
+                                        )
+                                        .build()
+                        }
+                return InMemoryRegisteredClientRepository(registeredClients)
+        }
 
-        publicKeyFile.writeText(Base64.getEncoder().encodeToString(keyPair.public.encoded))
-        privateKeyFile.writeText(Base64.getEncoder().encodeToString(keyPair.private.encoded))
+        @Bean
+        fun jwkSource(): JWKSource<SecurityContext> {
+                val keyPair = getOrCreateRsaKey()
+                val publicKey = keyPair.public as RSAPublicKey
+                val privateKey = keyPair.private as RSAPrivateKey
+                val rsaKey =
+                        RSAKey.Builder(publicKey)
+                                .privateKey(privateKey)
+                                .keyID("quintilis-auth-key")
+                                .build()
+                val jwkSet = JWKSet(rsaKey)
+                return ImmutableJWKSet(jwkSet)
+        }
 
-        return keyPair
-    }
+        private fun getOrCreateRsaKey(): KeyPair {
+                val keyDir = File(System.getProperty("user.home"), ".quintilis/keys")
+                val publicKeyFile = File(keyDir, "public.key")
+                val privateKeyFile = File(keyDir, "private.key")
 
-    @Bean
-    fun authorizationService(
-            jdbcTemplate: JdbcTemplate,
-            registeredClientRepository: RegisteredClientRepository
-    ): OAuth2AuthorizationService {
-        return JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository)
-    }
+                if (publicKeyFile.exists() && privateKeyFile.exists()) {
+                        val keyFactory = KeyFactory.getInstance("RSA")
+                        val publicKey =
+                                keyFactory.generatePublic(
+                                        X509EncodedKeySpec(
+                                                Base64.getDecoder().decode(publicKeyFile.readText())
+                                        )
+                                ) as
+                                        RSAPublicKey
+                        val privateKey =
+                                keyFactory.generatePrivate(
+                                        PKCS8EncodedKeySpec(
+                                                Base64.getDecoder()
+                                                        .decode(privateKeyFile.readText())
+                                        )
+                                ) as
+                                        RSAPrivateKey
+                        return KeyPair(publicKey, privateKey)
+                }
 
-    @Bean
-    fun authorizationConsentService(
-            jdbcTemplate: JdbcTemplate,
-            registeredClientRepository: RegisteredClientRepository
-    ): OAuth2AuthorizationConsentService {
-        return JdbcOAuth2AuthorizationConsentService(jdbcTemplate, registeredClientRepository)
-    }
+                // Gera e salva novas chaves
+                keyDir.mkdirs()
+                val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
+                keyPairGenerator.initialize(2048)
+                val keyPair = keyPairGenerator.generateKeyPair()
 
-    @Bean
-    fun authorizationServerSettings(): AuthorizationServerSettings {
-        return AuthorizationServerSettings.builder().build()
-    }
+                publicKeyFile.writeText(Base64.getEncoder().encodeToString(keyPair.public.encoded))
+                privateKeyFile.writeText(
+                        Base64.getEncoder().encodeToString(keyPair.private.encoded)
+                )
 
-    @Bean
-    fun corsConfigurationSource(corsProperties: CorsProperties): CorsConfigurationSource {
-        val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns =
-                corsProperties.allowedOrigins // Usa allowedOriginPatterns para suportar wildcards
-        configuration.allowedMethods = listOf("GET", "POST", "OPTIONS")
-        configuration.allowedHeaders = listOf("*")
-        configuration.allowCredentials = true
-        val source = UrlBasedCorsConfigurationSource()
-        source.registerCorsConfiguration("/**", configuration)
-        return source
-    }
+                return keyPair
+        }
+
+        @Bean
+        fun authorizationService(
+                jdbcTemplate: JdbcTemplate,
+                registeredClientRepository: RegisteredClientRepository
+        ): OAuth2AuthorizationService {
+                return JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository)
+        }
+
+        @Bean
+        fun authorizationConsentService(
+                jdbcTemplate: JdbcTemplate,
+                registeredClientRepository: RegisteredClientRepository
+        ): OAuth2AuthorizationConsentService {
+                return JdbcOAuth2AuthorizationConsentService(
+                        jdbcTemplate,
+                        registeredClientRepository
+                )
+        }
+
+        @Bean
+        fun authorizationServerSettings(): AuthorizationServerSettings {
+                return AuthorizationServerSettings.builder().build()
+        }
+
+        @Bean
+        fun corsConfigurationSource(corsProperties: CorsProperties): CorsConfigurationSource {
+                val configuration = CorsConfiguration()
+                configuration.allowedOriginPatterns =
+                        corsProperties
+                                .allowedOrigins // Usa allowedOriginPatterns para suportar wildcards
+                configuration.allowedMethods = listOf("GET", "POST", "OPTIONS")
+                configuration.allowedHeaders = listOf("*")
+                configuration.allowCredentials = true
+                val source = UrlBasedCorsConfigurationSource()
+                source.registerCorsConfiguration("/**", configuration)
+                return source
+        }
 }

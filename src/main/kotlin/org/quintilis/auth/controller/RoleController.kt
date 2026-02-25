@@ -5,6 +5,8 @@ import org.quintilis.auth.service.RoleService
 import org.quintilis.common.dto.auth.PermissionDTO
 import org.quintilis.common.dto.auth.RoleDTO
 import org.quintilis.common.dto.auth.UserDTO
+import org.quintilis.common.exception.NotFoundException
+import org.quintilis.common.response.ApiResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -18,19 +20,19 @@ import org.springframework.web.bind.annotation.RestController
 class RoleController(private val roleService: RoleService) {
 
     @GetMapping("/roles")
-    fun getAllRoles(): ResponseEntity<List<RoleDTO>> {
-        return ResponseEntity.ok(roleService.getAllRoles())
+    fun getAllRoles(): ApiResponse<List<RoleDTO>> {
+        return ApiResponse.success(roleService.getAllRoles())
     }
 
     @GetMapping("/roles/{id}")
-    fun getRoleById(@PathVariable id: Int): ResponseEntity<RoleDTO> {
-        val role = roleService.getRoleById(id) ?: return ResponseEntity.notFound().build()
-        return ResponseEntity.ok(role)
+    fun getRoleById(@PathVariable id: Int): ApiResponse<RoleDTO> {
+        val role = roleService.getRoleById(id) ?: throw NotFoundException("Role not found")
+        return  ApiResponse.success(role)
     }
 
     @GetMapping("/permissions")
-    fun getAllPermissions(): ResponseEntity<List<PermissionDTO>> {
-        return ResponseEntity.ok(roleService.getAllPermissions())
+    fun getAllPermissions(): ApiResponse<List<PermissionDTO>> {
+        return  ApiResponse.success(roleService.getAllPermissions())
     }
 
     @PutMapping("/roles/{id}/permissions")
