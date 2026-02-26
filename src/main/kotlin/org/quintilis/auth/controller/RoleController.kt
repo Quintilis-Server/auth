@@ -7,12 +7,14 @@ import org.quintilis.common.dto.auth.RoleDTO
 import org.quintilis.common.dto.auth.UserDTO
 import org.quintilis.common.exception.NotFoundException
 import org.quintilis.common.response.ApiResponse
+import org.quintilis.common.response.PageResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -31,8 +33,11 @@ class RoleController(private val roleService: RoleService) {
     }
 
     @GetMapping("/permissions")
-    fun getAllPermissions(): ApiResponse<List<PermissionDTO>> {
-        return  ApiResponse.success(roleService.getAllPermissions())
+    fun getAllPermissions(
+        @RequestParam("page") pageParam: Int?
+    ): ApiResponse<PageResponse<PermissionDTO>> {
+        val page = pageParam ?: 1
+        return  ApiResponse.success(roleService.getAllPermissions(page))
     }
 
     @PutMapping("/roles/{id}/permissions")

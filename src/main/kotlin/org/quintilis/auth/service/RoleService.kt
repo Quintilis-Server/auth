@@ -7,8 +7,10 @@ import org.quintilis.common.dto.auth.UserDTO
 import org.quintilis.common.repositories.PermissionRepository
 import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.response.PageResponse
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -28,9 +30,16 @@ class RoleService(
         return roleRepository.findById(id).orElse(null)?.toDTO()
     }
 
-    @Cacheable("permissions")
-    fun getAllPermissions(): List<PermissionDTO> {
-        return permissionRepository.findAll().map { it.toDTO() }
+    @Cacheable("permissions_page", key = "#page")
+    fun getAllPermissions(page: Int): PageResponse<PermissionDTO> {
+        val pageable = PageRequest.of(page - 1, 10)
+        val pageResult = permissionRepository.findAll(pageable)
+        val permissions = pageResult.map { it.toDTO() }.toList()
+        return PageResponse(
+            items = permissions,
+            totalPages = pageResult.totalPages,
+            currentPage = page
+        )
     }
 
     @Transactional

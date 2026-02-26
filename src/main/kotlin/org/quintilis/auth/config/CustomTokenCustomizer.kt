@@ -32,7 +32,12 @@ private val userRepository: UserRepository) {
                                 }
 
                 if (user != null) {
-                    context.claims.claim("roles", user.roles.mapNotNull { it.name })
+                    val roles = user.roles.mapNotNull { it.name }
+                    val permissions =
+                            user.roles.flatMap { it.permissions }.mapNotNull { it.name }.distinct()
+
+                    context.claims.claim("roles", roles)
+                    context.claims.claim("permissions", permissions)
                     context.claims.claim("user_id", user.id.toString())
                     context.claims.claim("username", user.username)
                 }
