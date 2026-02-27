@@ -6,12 +6,17 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationManager
+import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.web.cors.CorsConfiguration
@@ -20,6 +25,7 @@ import org.springframework.web.cors.CorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 open class SecurityConfig(
         private val customOidcUserService: CustomOidcUserService,
         private val oAuth2SuccessHandler: OAuth2SuccessHandler,
@@ -31,24 +37,23 @@ open class SecurityConfig(
     fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
                 .authorizeHttpRequests { auth ->
-                    auth.requestMatchers(
-                                    "/",
-                                    "/index.html",
-                                    "/static/**",
-                                    "/assets/**",
-                                    "/login",
-                                    "/register",
-                                    "/auth/register",
-                                    "/auth/roles/**",
-                                    "/auth/roles",
-                                    "/auth/permissions",
-                                    "/auth/users",
-                                    "/auth/users/**",
-                                    "/error",
-                                    "/favicon.ico"
-                            )
-                            .permitAll()
-                    auth.anyRequest().authenticated()
+                    auth
+                        .requestMatchers(
+                            "/",
+                            "/index.html",
+                            "/static/**",
+                            "/assets/**",
+                            "/login",
+                            "/register",
+                            "/auth/register",
+                            "/error",
+                            "/favicon.ico"
+                        ).permitAll()
+                        // Permite visualização pública de listas (GET)
+                        .requestMatchers(HttpMethod.GET, "/auth/roles/**", "/auth/users/**", "/auth/permissions/**").permitAll()
+                        // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
+                        .requestMatchers("/auth/**").authenticated()
+                        .anyRequest().authenticated()
                 }
                 .cors { cors ->
                     cors.configurationSource { request ->
@@ -73,6 +78,11 @@ open class SecurityConfig(
                     }
                     oauth.successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
                 }
+                .oauth2ResourceServer { resourceServer ->
+                    resourceServer.jwt { jwt ->
+                        jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
+                    }
+                }
                 .logout { logout ->
                     logout.logoutUrl("/logout")
                     logout.invalidateHttpSession(true)
@@ -88,6 +98,17 @@ open class SecurityConfig(
                 .requestCache { it.requestCache(NullRequestCache()) }
 
         return http.build()
+    }
+
+    @Bean
+    fun jwtAuthenticationConverter(): JwtAuthenticationConverter {
+        val converter = JwtAuthenticationConverter()
+        converter.setJwtGrantedAuthoritiesConverter { jwt ->
+            val roles = jwt.getClaimAsStringList("roles")?.map{"ROLE_$it"} ?: emptyList()
+            val permissions = jwt.getClaimAsStringList("permissions") ?: emptyList()
+            (roles + permissions).map { SimpleGrantedAuthority(it) }
+        }
+        return converter
     }
 
     @Bean

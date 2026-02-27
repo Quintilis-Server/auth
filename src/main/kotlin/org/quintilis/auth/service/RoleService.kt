@@ -1,9 +1,12 @@
 package org.quintilis.auth.service
 
+import org.quintilis.auth.controller.RoleController
 import java.util.UUID
 import org.quintilis.common.dto.auth.PermissionDTO
 import org.quintilis.common.dto.auth.RoleDTO
 import org.quintilis.common.dto.auth.UserDTO
+import org.quintilis.common.entities.auth.Role
+import org.quintilis.common.exception.NotFoundException
 import org.quintilis.common.repositories.PermissionRepository
 import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
@@ -28,6 +31,10 @@ class RoleService(
 
     fun getRoleById(id: Int): RoleDTO? {
         return roleRepository.findById(id).orElse(null)?.toDTO()
+    }
+    @Cacheable("all_permissions")
+    fun getAllPermission(): List<PermissionDTO> {
+        return permissionRepository.findAll().toList().map { it.toDTO() }
     }
 
     @Cacheable("permissions_page", key = "#page")
@@ -69,5 +76,38 @@ class RoleService(
         user.roles.clear()
         user.roles.addAll(roles)
         return userRepository.save(user).toDTO()
+    }
+    @Transactional
+    @CacheEvict("users", "roles", allEntries = true)
+    fun updateRole(roleId: Int, roleDTO: RoleController.RoleUpdate): RoleDTO{
+        val role = roleRepository.findById(roleId).orElseThrow { NotFoundException("Role not found") }
+        val permissions = permissionRepository.findAllById(roleDTO.permissionIds)
+
+        role.apply {
+            this.permissions.clear()
+            this.permissions.addAll(permissions)
+            this.name = roleDTO.name
+            this.displayName = roleDTO.displayName
+            this.color = roleDTO.color
+            this.icon = roleDTO.icon
+            this.priority = roleDTO.priority
+        }
+
+        return roleRepository.save(role).toDTO()
+    }
+
+    @Transactional
+    @CacheEvict("users", "roles", allEntries = true)
+    fun create(dto: RoleController.RoleNew): RoleDTO{
+        val permissions = permissionRepository.findAllById(dto.permissionIds)
+        val role = Role().apply {
+            this.name = dto.name
+            this.displayName = dto.displayName
+            this.color = dto.color
+            this.priority = dto.priority
+            this.permissions.clear()
+            this.permissions.addAll(permissions)
+        }
+        return roleRepository.save(role).toDTO()
     }
 }
