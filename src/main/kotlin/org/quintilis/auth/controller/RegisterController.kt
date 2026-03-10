@@ -18,10 +18,10 @@ class RegisterController(
         private val passwordEncoder: PasswordEncoder
 ) {
 
-    @GetMapping("/register")
-    fun showRegisterForm(): String {
-        return "register"
-    }
+//    @GetMapping("/register")
+//    fun showRegisterForm(): String {
+//        return "register"
+//    }
 
     @PostMapping("/register")
     fun register(

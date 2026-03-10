@@ -1,5 +1,6 @@
 import React from 'react';
 import "../stylesheet/LoginPage.scss"
+import {AUTH_URL} from "../Consts.ts";
 
 const LoginPage: React.FC = () => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -19,7 +20,7 @@ const LoginPage: React.FC = () => {
                 {hasLogout && <div className="alert alert-success">Você saiu com sucesso.</div>}
                 {hasSuccess && <div className="alert alert-success">Conta criada! Faça login.</div>}
 
-                <form action="/login" method="POST" className="auth-form">
+                <form action={`${AUTH_URL}/login`} method="POST" className="auth-form">
                     <div className="form-group">
                         <label htmlFor="username">Usuário ou Email</label>
                         <input type="text" id="username" name="username" className="form-input" required autoFocus />
@@ -36,10 +37,10 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 <div className="social-buttons">
-                    <a href="/oauth2/authorization/google" className="btn btn-social btn-google">
+                    <a href={`${AUTH_URL}/oauth2/authorization/google`} className="btn btn-social btn-google">
                         Google
                     </a>
-                    <a href="/oauth2/authorization/microsoft" className="btn btn-social btn-microsoft">
+                    <a href={`${AUTH_URL}/oauth2/authorization/microsoft`} className="btn btn-social btn-microsoft">
                         Microsoft (Xbox)
                     </a>
                 </div>

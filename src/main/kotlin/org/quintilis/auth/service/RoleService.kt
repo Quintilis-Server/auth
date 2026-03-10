@@ -1,52 +1,93 @@
 package org.quintilis.auth.service
 
 import org.quintilis.auth.controller.RoleController
+import org.quintilis.auth.controller.RoleNew
 import java.util.UUID
 import org.quintilis.common.dto.auth.PermissionDTO
 import org.quintilis.common.dto.auth.RoleDTO
 import org.quintilis.common.dto.auth.UserDTO
 import org.quintilis.common.entities.auth.Role
-import org.quintilis.common.exception.NotFoundException
 import org.quintilis.common.repositories.PermissionRepository
 import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
-import org.quintilis.common.response.PageResponse
+import org.quintilis.common.service.BaseService
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import kotlin.reflect.KProperty1
 
 @Service
 class RoleService(
-        private val roleRepository: RoleRepository,
-        private val permissionRepository: PermissionRepository,
-        private val userRepository: UserRepository
-) {
+    private val roleRepository: RoleRepository,
+    private val permissionRepository: PermissionRepository,
+    private val userRepository: UserRepository
+): BaseService<Role, Int, RoleDTO, RoleNew>(roleRepository) {
 
+    // ========================================================================
+    // 1. CONTRATOS DO BASE SERVICE (A MÁGICA DA CONVERSÃO E BUSCA)
+    // ========================================================================
+
+    override fun getSearchFields(): List<KProperty1<Role, *>> {
+        return listOf(
+            Role::name,
+            Role::priority,
+            Role::displayName
+        )
+    }
+
+    override fun newDTOToEntity(newDTO: RoleNew): Role {
+        return Role().apply {
+            this.name = newDTO.name
+            this.displayName = newDTO.displayName
+            this.color = newDTO.color
+            this.priority = newDTO.priority
+            this.icon = newDTO.icon
+            this.permissions.clear()
+            this.permissions.addAll(permissionRepository.findAllById(newDTO.permissionIds))
+        }
+    }
+
+    override fun updateEntityFromDTO(dto: RoleDTO, entity: Role) {
+        entity.name = dto.name
+        entity.displayName = dto.displayName
+        entity.color = dto.color
+        entity.priority = dto.priority
+        entity.icon = dto.icon
+        entity.permissions.clear()
+        entity.permissions.addAll(permissionRepository.findAllById(dto.permissions.map { it.id }))
+    }
+
+    @Transactional
+    @CacheEvict("roles", "users", allEntries = true)
+    override fun create(dto: RoleNew): RoleDTO {
+        // Usa a lógica pronta do BaseService e só adiciona o CacheEvict por cima!
+        return super.create(dto)
+    }
+
+    @Transactional
+    @CacheEvict("roles", "users", allEntries = true)
+    override fun update(dto: RoleDTO, id: Int): RoleDTO {
+        return super.update(dto, id)
+    }
+
+    @Transactional
+    @CacheEvict("roles", "users", allEntries = true)
+    override fun delete(id: Int, hardDelete: Boolean): RoleDTO {
+        return super.delete(id, hardDelete)
+    }
+
+    // ========================================================================
+    // 3. MÉTODOS CUSTOMIZADOS (LISTAS ESPECÍFICAS E RELACIONAMENTOS)
+    // ========================================================================
+
+    // O Controller deve usar o findById do BaseService, mas você manteve essa lista
+    // customizada aqui. Se você precisar da lista inteira sem paginação:
     @Cacheable("roles")
     fun getAllRoles(): List<RoleDTO> {
         return roleRepository.findAll().sortedByDescending { it.priority ?: 0 }.map { it.toDTO() }
-    }
-
-    fun getRoleById(id: Int): RoleDTO? {
-        return roleRepository.findById(id).orElse(null)?.toDTO()
-    }
-    @Cacheable("all_permissions")
-    fun getAllPermission(): List<PermissionDTO> {
-        return permissionRepository.findAll().toList().map { it.toDTO() }
-    }
-
-    @Cacheable("permissions_page", key = "#page")
-    fun getAllPermissions(page: Int): PageResponse<PermissionDTO> {
-        val pageable = PageRequest.of(page - 1, 10)
-        val pageResult = permissionRepository.findAll(pageable)
-        val permissions = pageResult.map { it.toDTO() }.toList()
-        return PageResponse(
-            items = permissions,
-            totalPages = pageResult.totalPages,
-            currentPage = page
-        )
     }
 
     @Transactional
@@ -59,15 +100,6 @@ class RoleService(
         return roleRepository.save(role).toDTO()
     }
 
-    @Cacheable("users")
-    fun getAllUsers(): List<UserDTO> {
-        return userRepository.findAll().map { it.toDTO() }
-    }
-
-    fun getUserById(id: UUID): UserDTO? {
-        return userRepository.findById(id).orElse(null)?.toDTO()
-    }
-
     @Transactional
     @CacheEvict("users", allEntries = true)
     fun updateUserRoles(userId: UUID, roleIds: List<Int>): UserDTO? {
@@ -77,37 +109,13 @@ class RoleService(
         user.roles.addAll(roles)
         return userRepository.save(user).toDTO()
     }
-    @Transactional
-    @CacheEvict("users", "roles", allEntries = true)
-    fun updateRole(roleId: Int, roleDTO: RoleController.RoleUpdate): RoleDTO{
-        val role = roleRepository.findById(roleId).orElseThrow { NotFoundException("Role not found") }
-        val permissions = permissionRepository.findAllById(roleDTO.permissionIds)
 
-        role.apply {
-            this.permissions.clear()
-            this.permissions.addAll(permissions)
-            this.name = roleDTO.name
-            this.displayName = roleDTO.displayName
-            this.color = roleDTO.color
-            this.icon = roleDTO.icon
-            this.priority = roleDTO.priority
-        }
-
-        return roleRepository.save(role).toDTO()
+    @Cacheable("users")
+    fun getAllUsers(): List<UserDTO> {
+        return userRepository.findAll().map { it.toDTO() }
     }
 
-    @Transactional
-    @CacheEvict("users", "roles", allEntries = true)
-    fun create(dto: RoleController.RoleNew): RoleDTO{
-        val permissions = permissionRepository.findAllById(dto.permissionIds)
-        val role = Role().apply {
-            this.name = dto.name
-            this.displayName = dto.displayName
-            this.color = dto.color
-            this.priority = dto.priority
-            this.permissions.clear()
-            this.permissions.addAll(permissions)
-        }
-        return roleRepository.save(role).toDTO()
+    fun getUserById(id: UUID): UserDTO? {
+        return userRepository.findById(id).orElse(null)?.toDTO()
     }
 }

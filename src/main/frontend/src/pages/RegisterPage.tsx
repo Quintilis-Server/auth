@@ -1,5 +1,6 @@
 import React from 'react';
 import '../stylesheet/RegisterPage.scss';
+import {AUTH_URL} from "../Consts.ts";
 
 const RegisterPage: React.FC = () => {
     return (
@@ -7,7 +8,7 @@ const RegisterPage: React.FC = () => {
             <div className="auth-card">
                 <h2 className="auth-title">Criar Conta</h2>
 
-                <form action="/register" method="POST" className="auth-form">
+                <form action={`${AUTH_URL}/register`} method="POST" className="auth-form">
                     <div className="form-group">
                         <label htmlFor="username">Usuário</label>
                         <input type="text" id="username" name="username" className="form-input" required />

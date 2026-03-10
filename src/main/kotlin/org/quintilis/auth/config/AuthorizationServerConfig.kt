@@ -18,6 +18,7 @@ import java.util.Base64
 import java.util.UUID
 import org.quintilis.auth.config.properties.ClientSettingsProperties
 import org.quintilis.auth.config.properties.CorsProperties
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -54,6 +55,9 @@ import org.springframework.security.oauth2.server.authorization.client.JdbcRegis
 @EnableConfigurationProperties(ClientSettingsProperties::class, CorsProperties::class)
 open class AuthorizationServerConfig {
 
+    @Value("\${quintilis.auth.issuer-url}")
+    private lateinit var issuerUrl: String
+
     @Bean
     @Order(1)
     fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
@@ -69,7 +73,7 @@ open class AuthorizationServerConfig {
                     authorizationServerConfigurer.endpointsMatcher
                 )
             }
-            .cors(Customizer.withDefaults()) // Habilita CORS
+            .cors { it.disable() } // Habilita CORS
             .exceptionHandling { exceptions ->
                 exceptions.defaultAuthenticationEntryPointFor(
                     LoginUrlAuthenticationEntryPoint("/login"),
@@ -213,7 +217,9 @@ open class AuthorizationServerConfig {
 
     @Bean
     fun authorizationServerSettings(): AuthorizationServerSettings {
-        return AuthorizationServerSettings.builder().build()
+        return AuthorizationServerSettings.builder()
+            .issuer(issuerUrl)
+            .build()
     }
 
     @Bean

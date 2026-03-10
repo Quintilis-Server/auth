@@ -1,5 +1,6 @@
 server:
   port: 9000
+  forward-headers-strategy: framework
 
 spring:
   application:
@@ -18,6 +19,13 @@ spring:
       max-lifetime: 540000
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+#    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
   cache:
     type: redis
   data:
@@ -70,7 +78,8 @@ quintilis:
       - "http://localhost:3000"
       - "https://*.quintilis.org"
       - "http://localhost:*"
-
+  auth:
+    issuer-url: "${AUTH_ISSUER_URL:http://localhost:8080}"
   oauth2:
     clients:
       - clientId: "forum-frontend"
@@ -103,7 +112,8 @@ quintilis:
         clientSecret: "secret-debugger"
         redirectUris:
           - "https://oidcdebugger.com/debug"
-          - "http://localhost:8080/api/forum/category/all" # Adicionado para teste
+          - "http://localhost:8080/api/forum/category/all"
+          - "https://insomnia.rest/"
         scopes:
           - "openid"
           - "profile"

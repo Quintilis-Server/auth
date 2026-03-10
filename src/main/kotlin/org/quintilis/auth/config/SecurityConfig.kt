@@ -36,66 +36,67 @@ open class SecurityConfig(
     @Order(2)
     fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
         http
-                .authorizeHttpRequests { auth ->
-                    auth
-                        .requestMatchers(
-                            "/",
-                            "/index.html",
-                            "/static/**",
-                            "/assets/**",
-                            "/login",
-                            "/register",
-                            "/auth/register",
-                            "/error",
-                            "/favicon.ico"
-                        ).permitAll()
-                        // Permite visualização pública de listas (GET)
-                        .requestMatchers(HttpMethod.GET, "/auth/roles/**", "/auth/users/**", "/auth/permissions/**").permitAll()
-                        // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
-                        .requestMatchers("/auth/**").authenticated()
-                        .anyRequest().authenticated()
+            .authorizeHttpRequests { auth ->
+                auth
+                    .requestMatchers(
+                        "/",
+                        "/index.html",
+                        "/static/**",
+                        "/assets/**",
+                        "/login",
+                        "/register",
+                        "/auth/register",
+                        "/error",
+                        "/favicon.ico"
+                    ).permitAll()
+                    // Permite visualização pública de listas (GET)
+                    .requestMatchers(HttpMethod.GET, "/roles/**", "/users/**", "/permissions/**", "/routes/**").permitAll()
+                    // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
+                    .requestMatchers("/auth/**").authenticated()
+                    .anyRequest().authenticated()
+            }
+            .cors { it.disable() }
+//                .cors { cors ->
+//                    cors.configurationSource { request ->
+//                        CorsConfiguration().apply {
+//                            allowedOriginPatterns = listOf("http://localhost:*", "https://*.quintilis.org")
+//                            allowedMethods = listOf("*")
+//                            allowedHeaders = listOf("*")
+//                            allowCredentials = true
+//                        }
+//                    }
+//                }
+            .formLogin { form ->
+                form.loginPage("/login")
+                        .loginProcessingUrl("/login")
+                        .successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
+                        .permitAll()
+            }
+            .oauth2Login { oauth ->
+                oauth.loginPage("/login")
+                oauth.userInfoEndpoint { userInfo ->
+                    userInfo.oidcUserService(customOidcUserService)
                 }
-                .cors { cors ->
-                    cors.configurationSource { request ->
-                        CorsConfiguration().apply {
-                            allowedOriginPatterns = listOf("http://localhost:*", "https://*.quintilis.org")
-                            allowedMethods = listOf("*")
-                            allowedHeaders = listOf("*")
-                            allowCredentials = true
-                        }
-                    }
+                oauth.successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
+            }
+            .oauth2ResourceServer { resourceServer ->
+                resourceServer.jwt { jwt ->
+                    jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
                 }
-                .formLogin { form ->
-                    form.loginPage("/login")
-                            .loginProcessingUrl("/login")
-                            .successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
-                            .permitAll()
+            }
+            .logout { logout ->
+                logout.logoutUrl("/logout")
+                logout.invalidateHttpSession(true)
+                logout.clearAuthentication(true)
+                logout.deleteCookies("JSESSIONID")
+                logout.logoutSuccessHandler { request, response, _ ->
+                    val redirectUri = request.getParameter("redirect_uri") ?: frontendUrl
+                    response.sendRedirect(redirectUri)
                 }
-                .oauth2Login { oauth ->
-                    oauth.loginPage("/login")
-                    oauth.userInfoEndpoint { userInfo ->
-                        userInfo.oidcUserService(customOidcUserService)
-                    }
-                    oauth.successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
-                }
-                .oauth2ResourceServer { resourceServer ->
-                    resourceServer.jwt { jwt ->
-                        jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
-                    }
-                }
-                .logout { logout ->
-                    logout.logoutUrl("/logout")
-                    logout.invalidateHttpSession(true)
-                    logout.clearAuthentication(true)
-                    logout.deleteCookies("JSESSIONID")
-                    logout.logoutSuccessHandler { request, response, _ ->
-                        val redirectUri = request.getParameter("redirect_uri") ?: frontendUrl
-                        response.sendRedirect(redirectUri)
-                    }
-                    logout.permitAll()
-                }
-                .csrf { it.disable() }
-                .requestCache { it.requestCache(NullRequestCache()) }
+                logout.permitAll()
+            }
+            .csrf { it.disable() }
+            .requestCache { it.requestCache(NullRequestCache()) }
 
         return http.build()
     }

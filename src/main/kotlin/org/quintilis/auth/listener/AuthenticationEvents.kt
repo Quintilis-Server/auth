@@ -6,8 +6,10 @@ import org.quintilis.common.entities.auth.LoginLog
 import org.quintilis.common.entities.auth.User
 import org.quintilis.common.repositories.LoginLogRepository
 import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.service.UserService
 import org.springframework.context.event.EventListener
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.security.web.authentication.WebAuthenticationDetails
@@ -15,8 +17,8 @@ import org.springframework.stereotype.Component
 
 @Component
 class AuthenticationEvents(
-        private val loginLogRepository: LoginLogRepository,
-        private val userRepository: UserRepository
+    private val loginLogRepository: LoginLogRepository,
+    private val userService: UserService
 ) {
 
     @EventListener
@@ -38,16 +40,13 @@ class AuthenticationEvents(
                         else -> authentication.name
                     }
 
-            // Busca o usuário no banco
-            var user: User? =
-                    userRepository.findByEmail(identifier)
-                            ?: userRepository.findByUsername(identifier)
+            var user: User? = userService.findByEmail(identifier) ?: userService.findByUsername(identifier)
 
             // Se não achou e parece um UUID, tenta buscar pelo ID
             if (user == null) {
                 try {
                     val uuid = UUID.fromString(identifier)
-                    user = userRepository.findById(uuid).orElse(null)
+                    user = userService.findById(uuid).orElse(null)
                 } catch (e: IllegalArgumentException) {
                     // Não é UUID, ignora
                 }

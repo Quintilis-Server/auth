@@ -9,8 +9,14 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 
 @SpringBootApplication
 @EnableCaching
-@ComponentScan(basePackages = ["org.quintilis"])
-@EntityScan(basePackages = ["org.quintilis"])
+@ComponentScan(basePackages = [
+    "org.quintilis.common", // Para utilitários e DTOs
+    "org.quintilis.auth"
+])
+@EntityScan(basePackages = [
+    "org.quintilis.common.entities",
+    "org.quintilis.auth.entities" // Apenas entidades do Fórum (incluindo o User simplificado)
+])
 @EnableJpaRepositories(basePackages = ["org.quintilis.common.repositories"])
 class AuthApplication
 
