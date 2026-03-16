@@ -5,6 +5,7 @@ import org.quintilis.auth.service.CustomOidcUserService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationManager
@@ -13,15 +14,16 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
+import org.springframework.security.config.annotation.web.configurers.oauth2.server.authorization.OAuth2AuthorizationServerConfigurer
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.savedrequest.NullRequestCache
-import org.springframework.web.cors.CorsConfiguration
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
 import org.springframework.web.cors.CorsConfigurationSource
-
 
 @Configuration
 @EnableWebSecurity
@@ -34,7 +36,7 @@ open class SecurityConfig(
 
     @Bean
     @Order(2)
-    fun defaultSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun defaultSecurityFilterChain(http: HttpSecurity, corsConfigurationSource: CorsConfigurationSource): SecurityFilterChain {
         http
             .authorizeHttpRequests { auth ->
                 auth
@@ -49,13 +51,14 @@ open class SecurityConfig(
                         "/error",
                         "/favicon.ico"
                     ).permitAll()
+                    .requestMatchers("/oauth2/jwks").permitAll()
                     // Permite visualização pública de listas (GET)
                     .requestMatchers(HttpMethod.GET, "/roles/**", "/users/**", "/permissions/**", "/routes/**").permitAll()
                     // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
                     .requestMatchers("/auth/**").authenticated()
                     .anyRequest().authenticated()
             }
-            .cors { it.disable() }
+            .cors { it.disable()}
 //                .cors { cors ->
 //                    cors.configurationSource { request ->
 //                        CorsConfiguration().apply {
@@ -68,9 +71,9 @@ open class SecurityConfig(
 //                }
             .formLogin { form ->
                 form.loginPage("/login")
-                        .loginProcessingUrl("/login")
-                        .successHandler(oAuth2SuccessHandler) // Usa o handler inteligente
-                        .permitAll()
+                    .loginProcessingUrl("/login")
+                    .successHandler(oAuth2SuccessHandler)
+                    .permitAll()
             }
             .oauth2Login { oauth ->
                 oauth.loginPage("/login")
@@ -96,7 +99,7 @@ open class SecurityConfig(
                 logout.permitAll()
             }
             .csrf { it.disable() }
-            .requestCache { it.requestCache(NullRequestCache()) }
+//            .requestCache { it.requestCache(NullRequestCache()) }
 
         return http.build()
     }

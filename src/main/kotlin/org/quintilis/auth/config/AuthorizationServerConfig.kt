@@ -18,6 +18,7 @@ import java.util.Base64
 import java.util.UUID
 import org.quintilis.auth.config.properties.ClientSettingsProperties
 import org.quintilis.auth.config.properties.CorsProperties
+import org.quintilis.auth.handler.OAuth2SuccessHandler
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
@@ -60,29 +61,39 @@ open class AuthorizationServerConfig {
 
     @Bean
     @Order(1)
-    fun authorizationServerSecurityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun authorizationServerSecurityFilterChain(
+        http: HttpSecurity,
+        oAuth2SuccessHandler: OAuth2SuccessHandler,  // injeta aqui
+        corsConfigurationSource: CorsConfigurationSource
+    ): SecurityFilterChain {
         val authorizationServerConfigurer = OAuth2AuthorizationServerConfigurer()
         authorizationServerConfigurer.oidc(Customizer.withDefaults())
 
         http.securityMatcher(authorizationServerConfigurer.endpointsMatcher)
-            .authorizeHttpRequests { authorize ->
-                authorize.anyRequest().authenticated()
-            }
-            .csrf { csrf ->
-                csrf.ignoringRequestMatchers(
-                    authorizationServerConfigurer.endpointsMatcher
-                )
-            }
-            .cors { it.disable() } // Habilita CORS
+            .authorizeHttpRequests { it.anyRequest().authenticated() }
+            .csrf { csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher) }
+            .cors { it.configurationSource(corsConfigurationSource) }
             .exceptionHandling { exceptions ->
                 exceptions.defaultAuthenticationEntryPointFor(
                     LoginUrlAuthenticationEntryPoint("/login"),
                     MediaTypeRequestMatcher(MediaType.TEXT_HTML)
                 )
             }
-            .oauth2ResourceServer { resourceServer ->
-                resourceServer.jwt(Customizer.withDefaults())
+            .formLogin { form ->
+                form.loginPage("/login")
+                    .loginProcessingUrl("/login")
+                    .successHandler(oAuth2SuccessHandler)  // <-- handler correto aqui
+                    .permitAll()
             }
+            .exceptionHandling { exceptions ->
+                exceptions
+                    .defaultAuthenticationEntryPointFor(
+                        LoginUrlAuthenticationEntryPoint("/login"),
+                        MediaTypeRequestMatcher(MediaType.TEXT_HTML)
+                    )
+                    .authenticationEntryPoint(LoginUrlAuthenticationEntryPoint("/login"))
+            }
+            .oauth2ResourceServer { it.jwt(Customizer.withDefaults()) }
             .with(authorizationServerConfigurer, Customizer.withDefaults())
 
         return http.build()
@@ -158,7 +169,7 @@ open class AuthorizationServerConfig {
     }
 
     private fun getOrCreateRsaKey(): KeyPair {
-        val keyDir = File(System.getProperty("user.home"), ".quintilis/keys")
+        val keyDir = File("./keys")
         val publicKeyFile = File(keyDir, "public.key")
         val privateKeyFile = File(keyDir, "private.key")
 

@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.web.authentication.SavedRequestAwareAuthenticationSuccessHandler
+import org.springframework.security.web.savedrequest.DefaultSavedRequest
 import org.springframework.stereotype.Component
 import org.springframework.web.util.UriComponentsBuilder
 
@@ -28,28 +29,43 @@ class OAuth2SuccessHandler(
     }
 
     override fun onAuthenticationSuccess(
-            request: HttpServletRequest,
-            response: HttpServletResponse,
-            authentication: Authentication
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+        authentication: Authentication
     ) {
         val savedRequest =
-                request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as?
-                        org.springframework.security.web.savedrequest.DefaultSavedRequest
+            request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as?
+                    DefaultSavedRequest
+
+        logger.info("=== AUTH SUCCESS ===")
+        logger.info("Authentication type: ${authentication::class.simpleName}")
+        logger.info("Authentication name: ${authentication.name}")
+        logger.info("Is authenticated: ${authentication.isAuthenticated}")
+
+        val session = request.session
+        logger.info("Session id: ${session?.id}")
+        logger.info("Session attributes: ${session?.attributeNames?.toList()}")
+
+        logger.info("Saved request type: ${savedRequest?.let { it::class.simpleName }}")
+        logger.info("Saved request: $savedRequest")
+
         val savedRedirectUrl = savedRequest?.redirectUrl
 
         if (savedRedirectUrl != null && savedRedirectUrl.contains("/oauth2/authorize")) {
-            request.session?.removeAttribute("SPRING_SECURITY_SAVED_REQUEST")
-            clearAuthenticationAttributes(request)
-            redirectStrategy.sendRedirect(request, response, savedRedirectUrl)
+            // NÃO remova o savedRequest nem chame clearAuthenticationAttributes aqui
+            // Deixa o pai lidar com o redirect — ele garante que o SecurityContext
+            // foi salvo na sessão ANTES de redirecionar
+            super.onAuthenticationSuccess(request, response, authentication)
             return
         }
 
+        // Fluxo normal (login direto sem OAuth2 flow)
         val email =
-                if (authentication is OAuth2AuthenticationToken) {
-                    authentication.principal?.attributes["email"]?.toString()
-                } else {
-                    authentication.name
-                }
+            if (authentication is OAuth2AuthenticationToken) {
+                authentication.principal?.attributes["email"]?.toString()
+            } else {
+                authentication.name
+            }
 
         if (email == null) {
             super.onAuthenticationSuccess(request, response, authentication)
@@ -60,11 +76,11 @@ class OAuth2SuccessHandler(
         val token = jwtService.generateToken(userDetails)
 
         val redirectUrl =
-                UriComponentsBuilder.fromUriString(frontendUrl)
-                        .path("/oauth2/callback")
-                        .queryParam("token", token)
-                        .build()
-                        .toUriString()
+            UriComponentsBuilder.fromUriString(frontendUrl)
+                .path("/oauth2/callback")
+                .queryParam("token", token)
+                .build()
+                .toUriString()
 
         clearAuthenticationAttributes(request)
         redirectStrategy.sendRedirect(request, response, redirectUrl)

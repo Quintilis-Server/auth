@@ -2,6 +2,11 @@ server:
   port: 9000
   forward-headers-strategy: framework
 
+#logging:
+#  level:
+#    org.springframework.security: TRACE
+#    org.springframework.security.oauth2.server.authorization: TRACE
+
 spring:
   application:
     name: auth
@@ -12,7 +17,7 @@ spring:
       add-mappings: false
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: "jdbc:postgresql://${DB_HOST:localhost}:5432/minecraft?currentSchema=auth"
+    url: "jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_DATABASE}?currentSchema=auth"
     username: "${DB_USERNAME:postgres}"
     password: "${DB_PASSWORD:postgres}"
     hikari:
@@ -79,7 +84,7 @@ quintilis:
       - "https://*.quintilis.org"
       - "http://localhost:*"
   auth:
-    issuer-url: "${AUTH_ISSUER_URL:http://localhost:8080}"
+    issuer-url: "${AUTH_ISSUER_URL:http://localhost:9000}"
   oauth2:
     clients:
       - clientId: "forum-frontend"
