@@ -23,6 +23,7 @@ import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint
 import org.springframework.security.web.savedrequest.NullRequestCache
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher
+import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 
 @Configuration
@@ -59,17 +60,29 @@ open class SecurityConfig(
                     .requestMatchers("/auth/**").authenticated()
                     .anyRequest().authenticated()
             }
-            .cors {it.configurationSource(corsConfigurationSource)}
-//                .cors { cors ->
-//                    cors.configurationSource { request ->
-//                        CorsConfiguration().apply {
-//                            allowedOriginPatterns = listOf("http://localhost:*", "https://*.quintilis.org")
-//                            allowedMethods = listOf("*")
-//                            allowedHeaders = listOf("*")
-//                            allowCredentials = true
-//                        }
-//                    }
-//                }
+            .cors {cors ->
+                cors.configurationSource { request ->
+                    val path = request.requestURI
+                    // Só aplica CORS nas rotas de API e OAuth
+                    if (path.startsWith("/oauth2/") ||
+                        path.startsWith("/auth/") ||
+                        path == "/login" ||
+                        path.startsWith("/userinfo")) {
+                        CorsConfiguration().apply {
+                            allowedOriginPatterns = listOf(
+                                "http://localhost:*",
+                                "https://*.quintilis.org"
+                            )
+                            allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                            allowedHeaders = listOf("*")
+                            allowCredentials = true
+                        }
+                    } else {
+                        // Sem CORS para o resto
+                        null
+                    }
+                }
+            }
             .formLogin { form ->
                 form.loginPage("/login")
                     .loginProcessingUrl("/login")
