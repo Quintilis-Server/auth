@@ -52,13 +52,14 @@ open class SecurityConfig(
                         "/favicon.ico"
                     ).permitAll()
                     .requestMatchers("/oauth2/jwks").permitAll()
+                    .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     // Permite visualização pública de listas (GET)
                     .requestMatchers(HttpMethod.GET, "/roles/**", "/users/**", "/permissions/**", "/routes/**").permitAll()
                     // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
                     .requestMatchers("/auth/**").authenticated()
                     .anyRequest().authenticated()
             }
-            .cors { it.disable()}
+            .cors {it.configurationSource(corsConfigurationSource)}
 //                .cors { cors ->
 //                    cors.configurationSource { request ->
 //                        CorsConfiguration().apply {

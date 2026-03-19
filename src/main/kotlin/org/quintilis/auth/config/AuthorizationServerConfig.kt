@@ -24,6 +24,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
+import org.springframework.http.HttpMethod
 import org.springframework.http.MediaType
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.security.config.Customizer
@@ -71,7 +72,7 @@ open class AuthorizationServerConfig {
 
         http.securityMatcher(authorizationServerConfigurer.endpointsMatcher)
             .authorizeHttpRequests {
-                it.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                it.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 it.anyRequest().authenticated()
             }
             .csrf { csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher) }
