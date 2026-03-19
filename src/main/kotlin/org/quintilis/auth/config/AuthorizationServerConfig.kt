@@ -70,7 +70,10 @@ open class AuthorizationServerConfig {
         authorizationServerConfigurer.oidc(Customizer.withDefaults())
 
         http.securityMatcher(authorizationServerConfigurer.endpointsMatcher)
-            .authorizeHttpRequests { it.anyRequest().authenticated() }
+            .authorizeHttpRequests {
+                it.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+                it.anyRequest().authenticated()
+            }
             .csrf { csrf -> csrf.ignoringRequestMatchers(authorizationServerConfigurer.endpointsMatcher) }
             .cors { it.configurationSource(corsConfigurationSource) }
             .exceptionHandling { exceptions ->
