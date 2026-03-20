@@ -37,18 +37,6 @@ class OAuth2SuccessHandler(
             request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as?
                     DefaultSavedRequest
 
-        logger.info("=== AUTH SUCCESS ===")
-        logger.info("Authentication type: ${authentication::class.simpleName}")
-        logger.info("Authentication name: ${authentication.name}")
-        logger.info("Is authenticated: ${authentication.isAuthenticated}")
-
-        val session = request.session
-        logger.info("Session id: ${session?.id}")
-        logger.info("Session attributes: ${session?.attributeNames?.toList()}")
-
-        logger.info("Saved request type: ${savedRequest?.let { it::class.simpleName }}")
-        logger.info("Saved request: $savedRequest")
-
         val savedRedirectUrl = savedRequest?.redirectUrl
 
         if (savedRedirectUrl != null && savedRedirectUrl.contains("/oauth2/authorize")) {
