@@ -17,7 +17,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories
     "org.quintilis.common.entities",
     "org.quintilis.auth.entities" // Apenas entidades do Fórum (incluindo o User simplificado)
 ])
-@EnableJpaRepositories(basePackages = ["org.quintilis.common.repositories"])
+@EnableJpaRepositories(basePackages = ["org.quintilis.common.repositories", "org.quintilis.auth.repositories"])
 class AuthApplication
 
 fun main(args: Array<String>) {

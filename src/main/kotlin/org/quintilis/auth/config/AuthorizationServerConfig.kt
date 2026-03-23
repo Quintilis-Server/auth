@@ -1,5 +1,7 @@
 package org.quintilis.auth.config
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.nimbusds.jose.jwk.JWKSet
 import com.nimbusds.jose.jwk.RSAKey
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet
@@ -50,6 +52,10 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository
+import org.springframework.security.jackson2.SecurityJackson2Modules
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository.RegisteredClientParametersMapper
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository.RegisteredClientRowMapper
+import org.springframework.security.oauth2.server.authorization.jackson2.OAuth2AuthorizationServerJackson2Module
 
 @Configuration
 @EnableWebSecurity
@@ -104,39 +110,33 @@ open class AuthorizationServerConfig {
 
     @Bean
     fun registeredClientRepository(
-        jdbcTemplate: JdbcTemplate, // Injetando o banco de dados
+        jdbcTemplate: JdbcTemplate,
         clientSettings: ClientSettingsProperties,
         passwordEncoder: PasswordEncoder
     ): RegisteredClientRepository {
 
-        // 1. Cria o repositório baseado no JDBC (Banco de Dados)
+        // 1. Instancia o repositório JDBC (No Spring 7.0+, ele já vem com o Jackson configurado perfeitamente)
         val repository = JdbcRegisteredClientRepository(jdbcTemplate)
 
-        // 2. Itera sobre os clientes que vieram do application.yml
+        // 2. Itera sobre os clientes do application.yml
         clientSettings.clients.forEach { client ->
 
-            // 3. Só salva no banco se o cliente ainda não existir
+            // 3. Verifica se o cliente já existe (Se o banco estiver limpo, passa liso)
             if (repository.findByClientId(client.clientId) == null) {
                 val registeredClient = RegisteredClient.withId(
                     UUID.nameUUIDFromBytes(client.clientId.toByteArray()).toString()
                 )
                     .clientId(client.clientId)
                     .clientSecret(passwordEncoder.encode(client.clientSecret))
-                    .clientAuthenticationMethod(
-                        ClientAuthenticationMethod.CLIENT_SECRET_BASIC
-                    )
-                    .authorizationGrantType(
-                        AuthorizationGrantType.AUTHORIZATION_CODE
-                    )
-                    .authorizationGrantType(
-                        AuthorizationGrantType.REFRESH_TOKEN
-                    )
+                    .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                    .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                    .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
                     .redirectUris { uris -> uris.addAll(client.redirectUris) }
                     .scopes { scopes -> scopes.addAll(client.scopes) }
                     .clientSettings(
                         ClientSettings.builder()
                             .requireAuthorizationConsent(false)
-                            .requireProofKey(false) // Desabilita a exigência de PKCE
+                            .requireProofKey(false)
                             .build()
                     )
                     .tokenSettings(
@@ -148,12 +148,11 @@ open class AuthorizationServerConfig {
                     )
                     .build()
 
-                // 4. Salva fisicamente na tabela oauth2_registered_client
+                // 4. Salva fisicamente na tabela (O Spring 7 vai embutir os @class automaticamente)
                 repository.save(registeredClient)
             }
         }
 
-        // 5. Retorna o repositório JDBC em vez do InMemory
         return repository
     }
 
