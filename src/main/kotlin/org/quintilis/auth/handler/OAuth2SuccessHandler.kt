@@ -33,44 +33,39 @@ class OAuth2SuccessHandler(
         response: HttpServletResponse,
         authentication: Authentication
     ) {
-        val savedRequest =
-            request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as?
-                    DefaultSavedRequest
-
+        val savedRequest = request.session?.getAttribute("SPRING_SECURITY_SAVED_REQUEST") as? DefaultSavedRequest
         val savedRedirectUrl = savedRequest?.redirectUrl
 
-        if (savedRedirectUrl != null && savedRedirectUrl.contains("/oauth2/authorize")) {
-            // NÃO remova o savedRequest nem chame clearAuthenticationAttributes aqui
-            // Deixa o pai lidar com o redirect — ele garante que o SecurityContext
-            // foi salvo na sessão ANTES de redirecionar
+        logger.info("=== AUTH SUCCESS ===")
+        logger.info("Authentication type: ${authentication::class.simpleName}")
+        logger.info("Saved request: $savedRedirectUrl")
+
+        if (savedRedirectUrl != null) {
+            // Login direto sem fluxo OAuth2 — redireciona para o frontend
             super.onAuthenticationSuccess(request, response, authentication)
             return
         }
 
-        // Fluxo normal (login direto sem OAuth2 flow)
-        val email =
-            if (authentication is OAuth2AuthenticationToken) {
-                authentication.principal?.attributes["email"]?.toString()
-            } else {
-                authentication.name
+        // Fluxo direto (sem OAuth2 flow) — só para login sem frontend OAuth2
+        if (authentication is OAuth2AuthenticationToken) {
+            // Login social sem fluxo OAuth2 — redireciona para o frontend com token JWT
+            val email = authentication.principal?.attributes["email"]?.toString()
+            if (email != null) {
+                val userDetails = userDetailsService.loadUserByUsername(email)
+                val token = jwtService.generateToken(userDetails)
+                val redirectUrl = UriComponentsBuilder.fromUriString(frontendUrl)
+                    .path("/oauth2/callback")
+                    .queryParam("token", token)
+                    .build()
+                    .toUriString()
+                clearAuthenticationAttributes(request)
+                redirectStrategy.sendRedirect(request, response, redirectUrl)
+                return
             }
-
-        if (email == null) {
-            super.onAuthenticationSuccess(request, response, authentication)
-            return
         }
 
-        val userDetails = userDetailsService.loadUserByUsername(email)
-        val token = jwtService.generateToken(userDetails)
-
-        val redirectUrl =
-            UriComponentsBuilder.fromUriString(frontendUrl)
-                .path("/oauth2/callback")
-                .queryParam("token", token)
-                .build()
-                .toUriString()
-
-        clearAuthenticationAttributes(request)
-        redirectStrategy.sendRedirect(request, response, redirectUrl)
+        // Fallback
+        redirectStrategy.sendRedirect(request, response, frontendUrl)
+        return
     }
 }

@@ -15,7 +15,7 @@ class FrontendController(
 
     // Avisa que a resposta vai ser um HTML
     @GetMapping(
-        value = ["/", "/login", "/forgot-password", "/reset-password"],
+        value = ["/", "/login", "/forgot-password", "/reset-password", "/register", "/account"],
         produces = [MediaType.TEXT_HTML_VALUE]
     )
     fun serveReactFrontend(): Resource {

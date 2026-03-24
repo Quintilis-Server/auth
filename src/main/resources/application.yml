@@ -87,6 +87,15 @@ quintilis:
     issuer-url: "${AUTH_ISSUER_URL:http://localhost:9000}"
   oauth2:
     clients:
+      - clientId: "quintilis-frontend"
+        clientSecret: "secret-frontend"
+        redirectUris:
+          - "http://localhost:5175/authorized"
+          - "https://quintilis.org/authorized"
+        scopes:
+          - "openid"
+          - "read_profile"
+          - "offline_access"
       - clientId: "forum-frontend"
         clientSecret: "secret-forum"
         redirectUris:

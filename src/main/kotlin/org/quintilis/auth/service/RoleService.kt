@@ -118,4 +118,9 @@ class RoleService(
     fun getUserById(id: UUID): UserDTO? {
         return userRepository.findById(id).orElse(null)?.toDTO()
     }
+
+    @Cacheable("role", key = "#roleName")
+    fun getRoleByName(roleName: String): RoleDTO? {
+        return roleRepository.findByName(roleName)?.toDTO()
+    }
 }

@@ -7,6 +7,7 @@ import org.quintilis.common.exception.InternalServerException
 import org.quintilis.common.exception.UnauthorizedException
 import org.quintilis.common.response.ApiResponse
 import org.quintilis.common.service.UserService
+import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -19,6 +20,7 @@ import java.util.UUID
 class UserController(
     private val userService: UserService
 ): BaseController<User, UUID, UserDTO, UserDTO>(userService){
+
     override val allowCreate: Boolean
         get() = false
 
