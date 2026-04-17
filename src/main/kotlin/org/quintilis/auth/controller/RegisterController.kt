@@ -1,24 +1,31 @@
 package org.quintilis.auth.controller
 
 import org.quintilis.auth.service.RoleService
-import java.util.UUID
 import org.quintilis.common.entities.auth.User
-import org.quintilis.common.repositories.RoleRepository
-import org.quintilis.common.repositories.UserRepository
 import org.quintilis.common.service.UserService
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.core.io.Resource
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseBody
 
 @Controller
 class RegisterController(
     private val passwordEncoder: PasswordEncoder,
     private val userService: UserService,
-    private val roleService: RoleService
+    private val roleService: RoleService,
+    @Value("classpath:/static/index.html") private val indexHtml: Resource
 ) {
+
+    @GetMapping("/register")
+    @ResponseBody // Importante: para retornar o arquivo direto, não uma View do Thymeleaf
+    fun serveRegisterPage(): Resource {
+        return indexHtml
+    }
 
     @PostMapping("/register")
     fun register(
