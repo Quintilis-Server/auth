@@ -5,6 +5,8 @@ import org.quintilis.common.repositories.RoleRepository
 import org.quintilis.common.repositories.UserRepository
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
+import org.springframework.security.oauth2.core.oidc.OidcIdToken
+import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser
 import org.springframework.security.oauth2.core.oidc.user.OidcUser
 import org.springframework.stereotype.Service
@@ -34,12 +36,7 @@ class CustomOidcUserService(
                 }
 
         if (user != null) {
-            return DefaultOidcUser(
-                    oidcUser.authorities,
-                    oidcUser.idToken,
-                    oidcUser.userInfo,
-                    "email"
-            )
+            return injectInternalId(oidcUser, user.id.toString())
         }
 
         if (email.isNotEmpty()) {
@@ -80,6 +77,29 @@ class CustomOidcUserService(
             user = userRepository.saveAndFlush(newUser)
         }
 
-        return DefaultOidcUser(oidcUser.authorities, oidcUser.idToken, oidcUser.userInfo, "email")
+        return injectInternalId(oidcUser, user!!.id.toString())
+    }
+
+
+    private fun injectInternalId(oidcUser: OidcUser, internalId: String): OidcUser {
+        // Adiciona o UUID no token
+        val newIdTokenClaims = oidcUser.idToken.claims.toMutableMap()
+        newIdTokenClaims["internal_id"] = internalId
+        val newIdToken = OidcIdToken(
+            oidcUser.idToken.tokenValue,
+            oidcUser.idToken.issuedAt,
+            oidcUser.idToken.expiresAt,
+            newIdTokenClaims
+        )
+
+        // Adiciona o UUID no UserInfo (se o Google tiver mandado um)
+        val newUserInfo = oidcUser.userInfo?.let {
+            val userInfoClaims = it.claims.toMutableMap()
+            userInfoClaims["internal_id"] = internalId
+            OidcUserInfo(userInfoClaims)
+        }
+
+        // Retorna a classe padrão do Spring apontando para a nossa nova chave!
+        return DefaultOidcUser(oidcUser.authorities, newIdToken, newUserInfo, "internal_id")
     }
 }

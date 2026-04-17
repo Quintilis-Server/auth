@@ -1,0 +1,175 @@
+.navbar{
+    //position: fixed;
+    //top: 0;
+    //left: 0;
+    //right: 0;
+    z-index: 100;
+    padding: 2em 0;
+    transition: all var(--transition-medium);
+    
+    &.scrolled{
+        padding: 1em 0;
+        background: rgba(10, 10, 18, 0.85);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border);
+    }
+    .navbar-inner{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        
+        .nav-logo{
+            font-family: var(--font-heading);
+            font-size: 1.6rem;
+            font-weight: 400;
+            color: var(--text-primary);
+            letter-spacing: 0.04rem;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            flex-direction: column;
+
+            span{
+                width: max-content;
+                height: max-content;
+            }
+
+            .logo-letter{
+                color: var(--accent);
+                font-size: 2rem;
+                font-weight: 300;
+            }
+            
+            .logo-text {
+                color: var(--text-secondary);
+                font-weight: 300;
+            }
+
+            .logo-bottom {
+                color: var(--text-muted);
+                font-size: 1.4rem;
+            }
+        }
+    }
+    
+    .nav-links{
+        display: flex;
+        gap: 2em;
+        
+        a{
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-weight: 400;
+            letter-spacing: 0.08rem;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: color var(--transition-fast);
+            position: relative;
+            
+            &::after{
+                content: '';
+                position: absolute;
+                bottom: -4px;
+                left: 0;
+                width: 0;
+                height: 1px;
+                background: var(--accent);
+                transition: width var(--transition-medium);
+            }
+            
+            &:hover{
+                color: var(--text-primary);
+                
+                &::after{
+                    width: 100%;
+                }
+            }
+        }
+    }
+    
+    .nav-cta{
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--bg-primary);
+        background: var(--accent);
+        padding: 10px 28px;
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all var(--transition-fast);
+        
+        &:hover {
+            background: var(--accent-light);
+            color: var(--bg-primary);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-glow-strong);
+        }
+    }
+    
+    .nav-toggle {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        
+        span {
+            display: block;
+            width: 24px;
+            height: 1.5px;
+            background: var(--text-secondary);
+            transition: all var(--transition-fast);
+        }
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar-inner{
+        .nav-links {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(10, 10, 18, 0.97);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-medium);
+            
+            &.open {
+                opacity: 1;
+                pointer-events: all;
+            }
+            
+            a {
+                font-size: 1.2rem;
+            }
+        }
+        
+        .nav-cta {
+            display: none;
+        }
+        
+        .nav-toggle {
+            display: flex;
+            z-index: 101;
+        }
+        
+        .menu-open .nav-toggle {
+            span:first-child {
+                transform: rotate(45deg) translate(3px, 3px);
+            }
+            
+            span:last-child {
+                transform: rotate(-45deg) translate(3px, -3px);
+            }
+        }
+    }
+}
