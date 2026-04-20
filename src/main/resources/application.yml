@@ -82,6 +82,7 @@ quintilis:
       - "http://localhost:5173"
       - "http://localhost:3000"
       - "https://*.quintilis.org"
+      - "https://quintilis.org"
       - "http://localhost:*"
   auth:
     issuer-url: "${AUTH_ISSUER_URL:http://localhost:9000}"
