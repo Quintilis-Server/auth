@@ -1,7 +1,7 @@
 package org.quintilis.auth.config
 
 import java.util.UUID
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.UserRepository
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.core.Authentication

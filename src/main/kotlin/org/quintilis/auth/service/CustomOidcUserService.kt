@@ -1,8 +1,8 @@
 package org.quintilis.auth.service
 
 import org.quintilis.common.entities.auth.User
-import org.quintilis.common.repositories.RoleRepository
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.RoleRepository
+import org.quintilis.common.repositories.auth.UserRepository
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
 import org.springframework.security.oauth2.core.oidc.OidcIdToken

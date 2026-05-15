@@ -2,8 +2,8 @@ package org.quintilis.auth.service
 
 import java.util.UUID
 import org.quintilis.common.entities.auth.User
-import org.quintilis.common.repositories.RoleRepository
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.RoleRepository
+import org.quintilis.common.repositories.auth.UserRepository
 import org.slf4j.LoggerFactory
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
