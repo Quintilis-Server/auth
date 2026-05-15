@@ -71,7 +71,8 @@ open class SecurityConfig(
                         CorsConfiguration().apply {
                             allowedOriginPatterns = listOf(
                                 "http://localhost:*",
-                                "https://*.quintilis.org"
+                                "https://*.quintilis.org",
+                                "https://quintilis.org"
                             )
                             allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS")
                             allowedHeaders = listOf("*")
