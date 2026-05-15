@@ -2,12 +2,10 @@ package org.quintilis.auth.service
 
 import org.quintilis.common.dto.auth.PermissionDTO
 import org.quintilis.common.entities.auth.Permission
-import org.quintilis.common.repositories.PermissionRepository
+import org.quintilis.common.repositories.auth.PermissionRepository
 import org.quintilis.common.service.BaseService
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import kotlin.reflect.KProperty1
 

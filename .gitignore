@@ -40,3 +40,5 @@ src/main/frontend/.env.local
 npm-debug.log
 yarn-debug.log
 oauth2_urls.txt
+src/main/frontend/.env.development
+src/main/frontend/.env.production

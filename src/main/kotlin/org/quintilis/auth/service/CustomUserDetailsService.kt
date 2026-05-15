@@ -1,7 +1,7 @@
 package org.quintilis.auth.service
 
 import org.quintilis.common.entities.auth.User
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.UserRepository
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.security.core.userdetails.UserDetailsService
 import org.springframework.security.core.userdetails.UsernameNotFoundException

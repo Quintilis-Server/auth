@@ -1,20 +1,16 @@
 package org.quintilis.auth.service
 
-import org.quintilis.auth.controller.RoleController
 import org.quintilis.auth.controller.RoleNew
 import java.util.UUID
-import org.quintilis.common.dto.auth.PermissionDTO
 import org.quintilis.common.dto.auth.RoleDTO
 import org.quintilis.common.dto.auth.UserDTO
 import org.quintilis.common.entities.auth.Role
-import org.quintilis.common.repositories.PermissionRepository
-import org.quintilis.common.repositories.RoleRepository
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.PermissionRepository
+import org.quintilis.common.repositories.auth.RoleRepository
+import org.quintilis.common.repositories.auth.UserRepository
 import org.quintilis.common.service.BaseService
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.data.domain.Page
-import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.reflect.KProperty1
@@ -57,7 +53,7 @@ class RoleService(
         entity.priority = dto.priority
         entity.icon = dto.icon
         entity.permissions.clear()
-        entity.permissions.addAll(permissionRepository.findAllById(dto.permissions.map { it.id }))
+        entity.permissions.addAll(permissionRepository.findAllById(dto.permissions.mapNotNull { it.id }))
     }
 
     @Transactional

@@ -4,12 +4,10 @@ import java.time.Instant
 import java.util.UUID
 import org.quintilis.common.entities.auth.LoginLog
 import org.quintilis.common.entities.auth.User
-import org.quintilis.common.repositories.LoginLogRepository
-import org.quintilis.common.repositories.UserRepository
+import org.quintilis.common.repositories.auth.LoginLogRepository
 import org.quintilis.common.service.UserService
 import org.springframework.context.event.EventListener
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
 import org.springframework.security.oauth2.client.authentication.OAuth2LoginAuthenticationToken
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.security.web.authentication.WebAuthenticationDetails
