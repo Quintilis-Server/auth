@@ -55,7 +55,7 @@ open class SecurityConfig(
                     .requestMatchers("/oauth2/jwks").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     // Permite visualização pública de listas (GET)
-                    .requestMatchers(HttpMethod.GET, "/roles/**", "/users/**", "/permissions/**", "/routes/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/roles/**", "/users/**", "/permissions/**", "/routes/**", "/frontend-routes/**").permitAll()
                     // Exige autenticação para qualquer outra operação dentro de /auth (POST, PUT, DELETE)
                     .requestMatchers("/auth/**").authenticated()
                     .anyRequest().authenticated()
